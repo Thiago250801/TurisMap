@@ -6,13 +6,11 @@ import { MapPin, Compass, Sparkles } from "lucide-react-native";
 import heroAmazon from "../assets/hero-amazon2.jpg";
 import { colors, radius, shadow } from "../theme/theme";
 import { fontFamily } from "../theme";
+import { AppStackParamList } from "../routes/types";
 
-type RootStackParamList = {
-  Onboarding: undefined;
-  Auth: undefined;
-};
 
-type Props = NativeStackScreenProps<RootStackParamList, "Onboarding">;
+
+type Props = NativeStackScreenProps<AppStackParamList, "Onboarding">;
 
 export function OnboardingScreen({ navigation }: Props) {
   return (

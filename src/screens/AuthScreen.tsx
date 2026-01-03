@@ -1,4 +1,13 @@
-import { ArrowRight, ChevronLeft, Eye, EyeOff, Lock, Mail, Store, User } from "lucide-react-native";
+import {
+  ArrowRight,
+  ChevronLeft,
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  Store,
+  User,
+} from "lucide-react-native";
 import React, { useState } from "react";
 import {
   View,
@@ -8,13 +17,17 @@ import {
   TextInput,
   ScrollView,
 } from "react-native";
-import { colors, radius, shadow } from "../theme/theme"
+import { colors, radius, shadow } from "../theme/theme";
 import { fontFamily } from "../theme";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { AppStackParamList } from "../routes/types";
 
 type Step = "select" | "auth";
 type UserType = "tourist" | "seller";
 
-export const AuthScreen = () => {
+type Props = NativeStackScreenProps<AppStackParamList, "Auth">;
+
+export const AuthScreen = ({navigation}: Props) => {
   const [step, setStep] = useState<Step>("select");
   const [userType, setUserType] = useState<UserType | null>(null);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
@@ -85,11 +98,11 @@ export const AuthScreen = () => {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.avatar}>
           {userType === "tourist" ? (
-            <View style={styles.iconCardPrimary}> 
+            <View style={styles.iconCardPrimary}>
               <User size={36} color={colors.primary} />
             </View>
           ) : (
-            <View style={styles.iconCardAccent}> 
+            <View style={styles.iconCardAccent}>
               <Store size={36} color={colors.accent} />
             </View>
           )}
@@ -119,7 +132,7 @@ export const AuthScreen = () => {
               <Text style={styles.label}>Nome completo</Text>
               <View style={styles.inputWrapper}>
                 <TextInput
-                style={styles.input}
+                  style={styles.input}
                   placeholder="Seu nome"
                   placeholderTextColor={colors.mutedForeground}
                 />
@@ -160,12 +173,24 @@ export const AuthScreen = () => {
             </View>
           </View>
 
-          <TouchableOpacity style={styles.button}>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => {
+              if (userType === "tourist") {
+                navigation.navigate("TouristHome");
+              }
+          
+              if (userType === "seller") {
+                navigation.navigate("SellerHome");
+              }
+            }}
+          >
             <Text style={styles.buttonText}>
               {authMode === "login" ? "Entrar" : "Continuar"}
             </Text>
             <ArrowRight size={18} color={colors.primaryForeground} />
           </TouchableOpacity>
+
         </View>
       </ScrollView>
     </View>
