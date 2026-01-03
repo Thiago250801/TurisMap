@@ -4,6 +4,7 @@ import { useFonts } from "expo-font";
 
 import { OnboardingScreen } from "./src/screens/OnboardingScreen";
 import { AuthScreen } from "./src/screens/AuthScreen";
+import { AppNavigator } from "./src/routes/AppNavigator";
 
 export type RootStackParamList = {
   Onboarding: undefined;
@@ -25,15 +26,6 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator
-        screenOptions={{
-          headerShown: false,
-        }}
-      >
-        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-        <Stack.Screen name="Auth" component={AuthScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <AppNavigator />
   );
 }
