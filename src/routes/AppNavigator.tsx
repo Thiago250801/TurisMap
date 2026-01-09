@@ -9,6 +9,9 @@ import { colors } from "../theme";
 import { Heart, MapPin, Search, User } from "lucide-react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { TouristHomeScreen } from "../screens/tourist/TouristHomeScreen";
+import { SearchScreen } from "../screens/tourist/SearchScreen";
+import { FavoritesScreen } from "../screens/tourist/FavoritesScreen";
+import { AccountScreen } from "../screens/tourist/AccountScreen";
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
 
@@ -50,7 +53,7 @@ export const TouristTabs = () => {
 
       <Tab.Screen
         name="SearchScreen"
-        component={Dummy}
+        component={SearchScreen}
         options={{
           tabBarIcon: ({ focused }) => (
             <Search color={focused ? colors.primary : colors.mutedForeground} />
