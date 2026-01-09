@@ -177,11 +177,11 @@ export const AuthScreen = ({navigation}: Props) => {
             style={styles.button}
             onPress={() => {
               if (userType === "tourist") {
-                navigation.navigate("TouristHome");
+                navigation.replace("TouristTabs");
               }
           
               if (userType === "seller") {
-                navigation.navigate("SellerHome");
+                navigation.replace("SellerTabs");
               }
             }}
           >
