@@ -1,6 +1,9 @@
 export type AppStackParamList = {
   Onboarding: undefined;
   Auth: undefined;
-  TouristHome: undefined;
-  SellerHome: undefined;
+  TouristTabs: undefined;
+  SellerTabs: undefined;
+  SearchScreen: undefined;
+  FavoritesScreen: undefined;
+  AccountScreen: undefined;
 };
