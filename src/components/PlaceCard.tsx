@@ -1,23 +1,66 @@
 import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
-import { Star } from "lucide-react-native";
+import { Star, Heart, Trash2 } from "lucide-react-native";
 import { colors, radius, shadow } from "../theme/theme";
 import { fontFamily } from "../theme";
 
 type Props = {
   title: string;
-  rating: number; // ⭐ novo campo
+  rating: number;
   image: string | any;
+
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
+
+  showRemoveButton?: boolean;
+  onRemove?: () => void;
+
   onPress?: () => void;
 };
 
-export const PlaceCard = ({ title, rating, image, onPress }: Props) => {
+export const PlaceCard = ({
+  title,
+  rating,
+  image,
+  isFavorite = false,
+  onToggleFavorite,
+  showRemoveButton = false,
+  onRemove,
+  onPress,
+}: Props) => {
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress}>
-      <Image
-        source={typeof image === "string" ? { uri: image } : image}
-        style={styles.image}
-      />
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9}>
+      {/* IMAGEM */}
+      <View>
+        <Image
+          source={typeof image === "string" ? { uri: image } : image}
+          style={styles.image}
+        />
 
+        {/* ACTION BUTTON */}
+        {showRemoveButton ? (
+          <TouchableOpacity
+            style={[styles.actionButton, styles.remove]}
+            onPress={onRemove}
+            activeOpacity={0.7}
+          >
+            <Trash2 size={18} color={colors.destructiveForeground} />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={onToggleFavorite}
+            activeOpacity={0.7}
+          >
+            <Heart
+              size={18}
+              color={isFavorite ? colors.destructive : colors.mutedForeground}
+              fill={isFavorite ? colors.destructive : "transparent"}
+            />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* INFO */}
       <View style={styles.info}>
         <Text style={styles.title}>{title}</Text>
 
@@ -41,6 +84,22 @@ const styles = StyleSheet.create({
   image: {
     width: "100%",
     height: 140,
+  },
+
+  actionButton: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  remove: {
+    backgroundColor: colors.destructive,
   },
 
   info: {
