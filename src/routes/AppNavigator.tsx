@@ -6,12 +6,13 @@ import { AuthScreen } from "../screens/AuthScreen";
 import { AppStackParamList } from "./types";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { colors } from "../theme";
-import { Heart, MapPin, Search, User } from "lucide-react-native";
+import { Heart, Map, MapPin, Search, User } from "lucide-react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { TouristHomeScreen } from "../screens/tourist/TouristHomeScreen";
 import { SearchScreen } from "../screens/tourist/SearchScreen";
 import { FavoritesScreen } from "../screens/tourist/FavoritesScreen";
-import { AccountScreen } from "../screens/tourist/AccountScreen";
+import { CreatePlanScreen } from "../screens/tourist/CreatePlanScreen";
+;
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
 
@@ -42,7 +43,7 @@ export const TouristTabs = () => {
       }}
     >
       <Tab.Screen
-        name="TouristTabs"
+        name="TouristHome"
         component={TouristHomeScreen}
         options={{
           tabBarIcon: ({ focused }) => (
@@ -62,8 +63,18 @@ export const TouristTabs = () => {
       />
 
       <Tab.Screen
+      name="CreatePlanScreen" 
+      component={CreatePlanScreen}
+      options={{
+        tabBarIcon: ({ focused }) => (
+          <Map color={focused ? colors.primary : colors.mutedForeground} />
+        ),
+      }}
+      />
+
+      <Tab.Screen
         name="FavoritesScreen"
-        component={Dummy}
+        component={FavoritesScreen}
         options={{
           tabBarIcon: ({ focused }) => (
             <Heart color={focused ? colors.primary : colors.mutedForeground} />
