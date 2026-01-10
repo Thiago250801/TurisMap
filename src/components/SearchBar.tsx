@@ -19,7 +19,7 @@ export function SearchBar({ value, onChange, placeholder = "Pesquisar..." }: Sea
       />
       <TextInput
         value={value}
-        onChangeText={onChange} // No RN, onChangeText retorna diretamente a string
+        onChangeText={onChange} 
         placeholder={placeholder}
         placeholderTextColor={colors.mutedForeground}
         style={styles.input}
@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.xl,
-    paddingLeft: 40, // Espaço para o ícone
+    paddingLeft: 40, 
     paddingRight: 16,
     color: colors.foreground,
     fontSize: 16,
