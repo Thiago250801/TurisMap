@@ -5,15 +5,31 @@ import { SearchBar } from "../../components/SearchBar";
 import { useState } from "react";
 import { PlaceCard } from "../../components/PlaceCard";
 import teatroAmazonas from "../../assets/Teatro_Amazonas.jpg"
+import { useFavoritesStore } from "../../store/useFavoriteStore";
+import { Alert, LayoutAnimation, UIManager, Platform } from "react-native";
+
 
 export const TouristHomeScreen = () => {
 
   const [search, setSearch] = useState("");
 
+  const favorites = useFavoritesStore((state) => state.favorites);
+  const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
+
+
+  const checkIsFavorite = (id: string) => favorites.some(item => item.id === id);
+
+  const place = {
+    id: "teatro-amazonas",
+    title: "Teatro Amazonas",
+    rating: 4.9,
+    image: teatroAmazonas,
+  };
+
   return (
     <View style={styles.container}>
       {/* HEADER */}
-<View style={styles.header}>
+      <View style={styles.header}>
         <View style={styles.topRow}>
           <View style={styles.logo}>
             <View style={styles.logoIcon}>
@@ -31,20 +47,44 @@ export const TouristHomeScreen = () => {
         </View>
 
         {/* SearchBar inserida aqui */}
-        <SearchBar 
-          value={search} 
-          onChange={setSearch} 
-          placeholder="Buscar lugares, experiências..." 
+        <SearchBar
+          value={search}
+          onChange={setSearch}
+          placeholder="Buscar lugares, experiências..."
         />
       </View>
 
-      {/* CONTENT */}
+
       <ScrollView contentContainerStyle={styles.content}>
+        {/* POPULAR */}
         <Text style={styles.sectionTitle}>Popular entre os usuários</Text>
-        <PlaceCard title="Teatro Amazonas" rating={4.5} image={teatroAmazonas} />
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.horizontalList}
+        >
+          <PlaceCard
+            {...place}
+            isFavorite={checkIsFavorite(place.id)}
+            onToggleFavorite={() => toggleFavorite(place)}
+          />
+
+
+
+        </ScrollView>
+
+        {/* SUGESTÕES */}
         <Text style={styles.sectionTitle}>Sugestões do Turismap</Text>
-        <Text style={styles.placeholder}>Cards virão aqui 👇</Text>
+        <PlaceCard
+          {...place}
+          isFavorite={checkIsFavorite(place.id)}
+          onToggleFavorite={() => toggleFavorite(place)}
+        />
+
+
       </ScrollView>
+
     </View>
   );
 };
@@ -66,11 +106,11 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
 
-topRow: {
+  topRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16, 
+    marginBottom: 16,
   },
 
 
@@ -101,6 +141,11 @@ topRow: {
 
   notification: {
     position: "relative",
+  },
+
+  horizontalList: {
+    paddingVertical: 8,
+    gap: 16,
   },
 
   badge: {
