@@ -13,7 +13,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useForm, Controller } from "react-hook-form";
-import { Check, WifiOff, AlertCircle, Calendar } from "lucide-react-native";
+import { Check, WifiOff, AlertCircle, Calendar, Map } from "lucide-react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { colors, fontFamily, radius } from "../../theme";
 import { suggestions, popularPlaces } from "../../data/mockData";
@@ -151,7 +151,7 @@ export const CreatePlanScreen = () => {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <View style={styles.icon}>
-            <Check size={18} color={colors.primaryForeground} />
+            <Map size={18} color={colors.primaryForeground} />
           </View>
           <Text style={styles.title}>Criar Roteiro</Text>
         </View>
@@ -615,6 +615,9 @@ const styles = StyleSheet.create({
 
   image: {
     ...StyleSheet.absoluteFillObject,
+    width: "100%",  
+    height: "100%",
+    resizeMode: "cover",
   },
 
   overlay: {
