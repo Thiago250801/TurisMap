@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Image, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, Image, TouchableOpacity, ImageSourcePropType } from "react-native";
 import { Star, Heart, Trash2 } from "lucide-react-native";
 import { colors, radius, shadow } from "../theme/theme";
 import { fontFamily } from "../theme";
@@ -6,7 +6,7 @@ import { fontFamily } from "../theme";
 type Props = {
   title: string;
   rating: number;
-  image: string | any;
+  image: ImageSourcePropType;
 
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
@@ -43,7 +43,7 @@ export const PlaceCard = ({
             onPress={onRemove}
             activeOpacity={0.7}
           >
-            <Trash2 size={18} color={colors.destructiveForeground} />
+            <Trash2 size={18} color={colors.destructive} />
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
