@@ -1,23 +1,26 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+} from "react-native";
 import { MapPin, Bell } from "lucide-react-native";
 import { colors, fontFamily, radius } from "../../theme";
 import { SearchBar } from "../../components/SearchBar";
 import { useState } from "react";
 import { PlaceCard } from "../../components/PlaceCard";
-import teatroAmazonas from "../../assets/Teatro_Amazonas.jpg"
+import teatroAmazonas from "../../assets/Teatro_Amazonas.jpg";
 import { useFavoritesStore } from "../../store/useFavoriteStore";
-import { Alert, LayoutAnimation, UIManager, Platform } from "react-native";
-
 
 export const TouristHomeScreen = () => {
-
   const [search, setSearch] = useState("");
 
   const favorites = useFavoritesStore((state) => state.favorites);
   const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
 
-
-  const checkIsFavorite = (id: string) => favorites.some(item => item.id === id);
+  const checkIsFavorite = (id: string) =>
+    favorites.some((item) => item.id === id);
 
   const place = {
     id: "teatro-amazonas",
@@ -54,7 +57,6 @@ export const TouristHomeScreen = () => {
         />
       </View>
 
-
       <ScrollView contentContainerStyle={styles.content}>
         {/* POPULAR */}
         <Text style={styles.sectionTitle}>Popular entre os usuários</Text>
@@ -69,9 +71,6 @@ export const TouristHomeScreen = () => {
             isFavorite={checkIsFavorite(place.id)}
             onToggleFavorite={() => toggleFavorite(place)}
           />
-
-
-
         </ScrollView>
 
         {/* SUGESTÕES */}
@@ -81,14 +80,10 @@ export const TouristHomeScreen = () => {
           isFavorite={checkIsFavorite(place.id)}
           onToggleFavorite={() => toggleFavorite(place)}
         />
-
-
       </ScrollView>
-
     </View>
   );
 };
-
 
 const styles = StyleSheet.create({
   container: {
@@ -112,7 +107,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
-
 
   logo: {
     flexDirection: "row",
