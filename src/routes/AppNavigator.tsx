@@ -12,7 +12,8 @@ import { TouristHomeScreen } from "../screens/tourist/TouristHomeScreen";
 import { SearchScreen } from "../screens/tourist/SearchScreen";
 import { FavoritesScreen } from "../screens/tourist/FavoritesScreen";
 import { CreatePlanScreen } from "../screens/tourist/CreatePlanScreen";
-;
+import { ProductDetailsScreen } from "../screens/tourist/ProductDetailsScreen";
+import { PlaceDetailsScreen } from "../screens/tourist/PlaceDetailsScreen";
 
 const Stack = createNativeStackNavigator<AppStackParamList>();
 
@@ -23,6 +24,8 @@ export function AppNavigator() {
         <Stack.Screen name="Onboarding" component={OnboardingScreen} />
         <Stack.Screen name="Auth" component={AuthScreen} />
         <Stack.Screen name="TouristTabs" component={TouristTabs} />
+        <Stack.Screen name="Product" component={ProductDetailsScreen} />
+        <Stack.Screen name="Place" component={PlaceDetailsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
