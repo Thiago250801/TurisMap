@@ -59,7 +59,9 @@ export const CreatePlanScreen = ({
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
 
   // Combina suggestions e popularPlaces
-  const allPlaces = [...suggestions, ...popularPlaces];
+  const allPlaces = [...suggestions, ...popularPlaces].filter((place, index, self) =>
+    index === self.findIndex((p) => p.id === place.id)
+  );
 
   // Função para formatar data em pt-BR
   const formatDatePtBR = (date: Date) => {

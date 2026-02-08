@@ -7,6 +7,7 @@ import { SellerVitrineScreen } from "../screens/seller/SellerVitrineScreen";
 import { SellerProductsScreen } from "../screens/seller/SellerProductsScreen";
 import { SellerProductFormScreen } from "../screens/seller/SellerProductsFormScreen";
 import { SellerAccountScreen } from "../screens/seller/SellerAccountScreen";
+import { StoreSettingsScreen } from "../screens/seller/StoreSettingsScreen";
 
 import {
   SellerTabsParamList,
@@ -85,5 +86,11 @@ const SellerTabsNavigator = () => (
 export const SellerNavigator = () => (
   <Stack.Navigator screenOptions={{ headerShown: false }}>
     <Stack.Screen name="SellerTabs" component={SellerTabsNavigator} />
+    <Stack.Screen
+      name="StoreSettings"
+      component={StoreSettingsScreen}
+      options={{
+      }}
+    />
   </Stack.Navigator>
 );

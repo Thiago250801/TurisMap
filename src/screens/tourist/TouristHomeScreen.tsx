@@ -15,8 +15,15 @@ import { PlaceCard } from "../../components/PlaceCard";
 import { useFavoritesStore } from "../../store/useFavoriteStore";
 import { usePlacesStore } from "../../store/usePlacesStore";
 import { useAuthStore } from "../../store/useAuthStore";
+import { NavigationProp, useNavigation } from "@react-navigation/native";
+
+
+type RootStackParamList = {
+  Place: { id: string };
+};
 
 export const TouristHomeScreen = () => {
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
   const [search, setSearch] = useState("");
 
   const { popular, suggestions } = usePlacesStore();
@@ -108,6 +115,7 @@ export const TouristHomeScreen = () => {
         >
           {filteredPopular.map((place) => (
             <PlaceCard
+              onPress={() => navigation.navigate("Place", { id: place.id })}
               key={place.id}
               {...place}
               isFavorite={checkIsFavorite(place.id)}
@@ -122,6 +130,7 @@ export const TouristHomeScreen = () => {
         {filteredSuggestions.map((place) => (
           <PlaceCard
             key={place.id}
+            onPress={() => navigation.navigate("Place", { id: place.id })}
             {...place}
             isFavorite={checkIsFavorite(place.id)}
             onToggleFavorite={() => handleToggleFavorite(place)}

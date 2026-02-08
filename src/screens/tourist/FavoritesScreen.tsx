@@ -6,8 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  LayoutAnimation,
-  Animated,
 } from "react-native";
 import { PlaceCard } from "../../components/PlaceCard";
 import { colors, fontFamily, radius } from "../../theme";
@@ -52,67 +50,60 @@ export const FavoritesScreen = () => {
     };
   }, []);
 
-  const handleRemove = async (id: string) => {
-    if (!user?.id) return;
+const handleRemove = async (id: string) => {
+  if (!user?.id) return;
 
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+  const place = favorites.find((p) => p.id === id);
+  if (!place) return;
 
-    // Encontra o lugar que vai ser removido
-    const place = favorites.find((p) => p.id === id);
-    if (!place) return;
+  setLastRemoved({
+    id: place.id,
+    title: place.title,
+    rating: place.rating,
+  });
 
-    // Salva para undo
-    setLastRemoved({
-      id: place.id,
-      title: place.title,
-      rating: place.rating,
-    });
+  if (undoTimeoutRef.current) {
+    clearTimeout(undoTimeoutRef.current);
+  }
 
-    // Limpa timeout anterior se existir
-    if (undoTimeoutRef.current) {
-      clearTimeout(undoTimeoutRef.current);
-    }
+  // 🔥 REMOVE IMEDIATAMENTE DA TELA
+  useFavoritesStore.getState().removeFavorite(id);
 
-    setSnackBarVisible(true);
+  setSnackBarVisible(true);
 
-    // Define timeout de 5 segundos para remover definitivamente
-    undoTimeoutRef.current = setTimeout(async () => {
-      try {
-        await removeFavoriteRemote(user.id, id);
-        setSnackBarVisible(false);
-        setLastRemoved(null);
-      } catch (error) {
-        Alert.alert("Erro", "Falha ao remover favorito");
-      }
-    }, 5000);
-  };
-
-  const handleUndo = async () => {
-    if (!user?.id || !lastRemoved) return;
-
-    // Limpa timeout
-    if (undoTimeoutRef.current) {
-      clearTimeout(undoTimeoutRef.current);
-      undoTimeoutRef.current = null;
-    }
-
-    // Recoloca o favorito
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-
+  undoTimeoutRef.current = setTimeout(async () => {
     try {
-      const localImage = getPlaceImage(lastRemoved.id);
-      await addFavoriteRemote(user.id, {
-        id: lastRemoved.id,
-        title: lastRemoved.title,
-        rating: lastRemoved.rating,
-        image: localImage || "",
-      });
+      await removeFavoriteRemote(user.id, id);
       setSnackBarVisible(false);
       setLastRemoved(null);
     } catch (error) {
-      Alert.alert("Erro", "Falha ao restaurar favorito");
+      Alert.alert("Erro", "Falha ao remover favorito");
     }
-  };
+  }, 5000);
+};
+
+
+const handleUndo = () => {
+  if (!lastRemoved) return;
+
+  if (undoTimeoutRef.current) {
+    clearTimeout(undoTimeoutRef.current);
+    undoTimeoutRef.current = null;
+  }
+
+  const localImage = getPlaceImage(lastRemoved.id);
+
+  useFavoritesStore.getState().restoreFavorite({
+    id: lastRemoved.id,
+    title: lastRemoved.title,
+    rating: lastRemoved.rating,
+    image: localImage || "",
+  });
+
+  setSnackBarVisible(false);
+  setLastRemoved(null);
+};
+
 
   const confirmRemove = (id: string) => {
     Alert.alert(

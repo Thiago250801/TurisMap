@@ -7,6 +7,7 @@ export type AppStackParamList = {
   TouristHome: undefined;
 
   CreatePlanScreen: undefined;
+  ViewPlanScreen: undefined;
   SearchScreen: undefined;
   FavoritesScreen: undefined;
   AccountScreen: undefined;
@@ -27,4 +28,5 @@ export type SellerProductsStackParamList = {
 
 export type SellerStackParamList = {
   SellerTabs: undefined;
+  StoreSettings: undefined;
 };

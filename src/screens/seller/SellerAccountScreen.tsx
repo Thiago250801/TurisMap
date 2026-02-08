@@ -58,7 +58,7 @@ export const SellerAccountScreen = ({ navigation }: Props) => {
         icon: <Store size={20} color={colors.primary} />,
         label: "Minha Loja",
         description: "Configurações da loja",
-        onPress: () => navigation.navigate("SellerVitrine" as never),
+        onPress: () => navigation.navigate("StoreSettings" as never),
         color: colors.primary,
       },
       {
@@ -66,7 +66,7 @@ export const SellerAccountScreen = ({ navigation }: Props) => {
         icon: <Package size={20} color={colors.primary} />,
         label: "Produtos",
         description: "Gerenciar catálogo",
-        onPress: () => navigation.navigate("SellerProducts" as never),
+        onPress: () => navigation.navigate("ProductsTab" as never),
         color: colors.primary,
       },
       {

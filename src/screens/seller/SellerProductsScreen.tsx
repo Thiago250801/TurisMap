@@ -31,7 +31,6 @@ import { imageService } from "../../services/imageService";
 type RootStackParamList = {
   SellerProducts: undefined;
   SellerProductForm: { id?: string };
-  SellerVitrine: undefined;
 };
 
 type SellerProductsScreenNavigationProp = NativeStackNavigationProp<
@@ -46,17 +45,16 @@ type SellerProductsScreenRouteProp = RouteProp<
 
 interface Props {
   navigation: SellerProductsScreenNavigationProp;
-  route: SellerProductsScreenRouteProp;
+  route?: SellerProductsScreenRouteProp;
 }
 
 export const SellerProductsScreen = ({
   navigation,
   route,
 }: Props) => {
-  const { products, addProduct, updateProduct, deleteProduct, loadProducts,  isLoading: storeLoading } =
+  const { products, addProduct, updateProduct, deleteProduct, loadProducts, isLoading: storeLoading } =
     useSellerStore();
   const { user } = useAuthStore();
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (user?.id) {
