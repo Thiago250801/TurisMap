@@ -6,12 +6,21 @@ import {
   TouchableOpacity,
   ImageSourcePropType,
 } from "react-native";
-import { ShoppingBag } from "lucide-react-native";
+import { ShoppingBag, Package } from "lucide-react-native";
 import { colors, radius, fontFamily } from "../theme";
-import { Product } from "../data/mockData";
+
+export type ProductCardData = {
+  id: string;
+  title: string;
+  price: number;
+  description: string;
+  image?: string;
+  sellerName: string;
+  available: boolean;
+};
 
 type Props = {
-  product: Product;
+  product: ProductCardData;
   onPress?: () => void;
   showBuyButton?: boolean;
 };
@@ -27,15 +36,19 @@ export const ProductCard = ({
       onPress={onPress}
       activeOpacity={0.9}
     >
-      {/* Imagem */}
       <View style={styles.imageContainer}>
-        <Image
-          source={typeof product.image === "string" ? { uri: product.image } : product.image}
-          style={styles.image}
-          resizeMode="cover"
-        />
+        {product.image ? (
+          <Image
+            source={{ uri: product.image }}
+            style={styles.image}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={styles.imagePlaceholder}>
+            <Package size={48} color={colors.mutedForeground} />
+          </View>
+        )}
 
-        {/* Overlay - Indisponível */}
         {!product.available && (
           <View style={styles.unavailableOverlay}>
             <View style={styles.unavailableBadge}>
@@ -45,25 +58,21 @@ export const ProductCard = ({
         )}
       </View>
 
-      {/* Info */}
       <View style={styles.info}>
-        {/* Título */}
         <Text style={styles.title} numberOfLines={1}>
           {product.title}
         </Text>
 
-        {/* Descrição */}
         <Text style={styles.description} numberOfLines={2}>
           {product.description}
         </Text>
 
-        {/* Footer: Preço + Botão */}
         <View style={styles.footer}>
           <View>
             <Text style={styles.price}>
               R$ {product.price.toFixed(2)}
             </Text>
-            <Text style={styles.seller}>{product.seller}</Text>
+            <Text style={styles.seller}>{product.sellerName}</Text>
           </View>
 
           {showBuyButton && product.available && (
@@ -100,6 +109,14 @@ const styles = StyleSheet.create({
   image: {
     width: "100%",
     height: "100%",
+  },
+
+  imagePlaceholder: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: colors.muted,
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   unavailableOverlay: {
