@@ -2,9 +2,8 @@ import teatroAmazonas from "../assets/Teatro_Amazonas.jpg";
 import heroAmazon from "../assets/hero-amazon2.jpg"
 import pontaNegra from "../assets/Ponta_Negra.jpg";
 import encontroAguas from "../assets/Encontro_Aguas.jpg";
-import artesanatoIndigena from "../assets/Artesanato_Indigena.jpeg";
 import passeioBarco from "../assets/Passeio_Barco.jpg";
-
+import mercadoMunicipal from "../assets/Mercado_Municipal.jpg";
 import {
   Globe,
   Landmark,
@@ -24,16 +23,6 @@ export interface Place {
   category: "cultural" | "nature" | "adventure" | "craft";
   sellerId?: string;
   sellerName?: string;
-}
-
-export interface Product {
-  id: string;
-  title: string;
-  price: number;
-  image: ImageSourcePropType;
-  description: string;
-  seller: string;
-  available: boolean;
 }
 
 export interface TravelPlan {
@@ -57,8 +46,6 @@ export const suggestions: Place[] = [
     description:
       "O Teatro Amazonas é um teatro brasileiro localizado no centro de Manaus, capital do estado do Amazonas. É a mais importante casa de espetáculos da região Norte do Brasil.",
     category: "cultural",
-    sellerId: "seller-1",
-    sellerName: "Manaus Cultural",
   },
   {
     id: "2",
@@ -79,72 +66,22 @@ export const suggestions: Place[] = [
     description:
       "Fenômeno natural único onde as águas escuras do Rio Negro encontram as águas barrentas do Rio Solimões, correndo lado a lado sem se misturar por quilômetros.",
     category: "nature",
-    sellerId: "seller-2",
-    sellerName: "Amazon Tours",
   },
+
 ];
 
 export const popularPlaces: Place[] = [
   {
     id: "4",
-    title: "Artesanato Indígena",
+    title: "Mercado Municipal Adolpho Lisboa",
     location: "Centro, Manaus",
-    rating: 4.7,
-    image: artesanatoIndigena,
-    description:
-      "Peças artesanais feitas por comunidades indígenas locais, incluindo bijuterias, cestos, e objetos de decoração com materiais da floresta.",
-    category: "craft",
-    sellerId: "seller-3",
-    sellerName: "Bijuteria Indígena",
-  },
-  {
-    id: "5",
-    title: "Passeio de Barco",
-    location: "Rio Negro",
     rating: 4.6,
-    image: passeioBarco,
+    image: mercadoMunicipal,
     description:
-      "Navegue pelos rios amazônicos em barcos tradicionais, conhecendo comunidades ribeirinhas e a fauna e flora da região.",
-    category: "adventure",
-    sellerId: "seller-2",
-    sellerName: "Amazon Tours",
+      "Mercado histórico com arquitetura art nouveau, oferecendo produtos típicos da região amazônica.",
+    category: "cultural",
   },
 ];
-
-export const products: Product[] = [
-  {
-    id: "p1",
-    title: "Passeio de Barco - Encontro das Águas",
-    price: 150,
-    image: passeioBarco,
-    description:
-      "Passeio de 4 horas pelos rios Negro e Solimões, incluindo parada para ver botos.",
-    seller: "Amazon Tours",
-    available: true,
-  },
-  {
-    id: "p2",
-    title: "Colar Indígena Artesanal",
-    price: 89,
-    image: artesanatoIndigena,
-    description:
-      "Colar feito à mão por artesãs da tribo Dessana, com sementes da Amazônia.",
-    seller: "Bijuteria Indígena",
-    available: true,
-  },
-  {
-    id: "p3",
-    title: "Tour Teatro Amazonas",
-    price: 45,
-    image: teatroAmazonas,
-    description:
-      "Visita guiada pelo Teatro Amazonas com história e curiosidades.",
-    seller: "Manaus Cultural",
-    available: true,
-  },
-];
-
-export const mockPlans: TravelPlan[] = [];
 
 export const categories = [
   { id: "all", name: "Todos", icon: Globe },
