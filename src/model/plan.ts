@@ -4,9 +4,3 @@ export type Place = {
   image: string;
 };
 
-type FormData = {
-  name: string;
-  startDate: string;
-  endDate: string;
-  offline: boolean;
-};

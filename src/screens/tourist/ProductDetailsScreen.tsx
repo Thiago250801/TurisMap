@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ImageBackground,
-  SafeAreaView,
   Alert,
 } from "react-native";
 import {
@@ -19,10 +18,12 @@ import {
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RouteProp } from "@react-navigation/native";
 import { colors, fontFamily, radius } from "../../theme";
-import { products, suggestions, popularPlaces } from "../../data/mockData";
+import { suggestions, popularPlaces } from "../../data/mockData";
 import { Button } from "../../components/Button";
 import { useFavoritesStore } from "../../store/useFavoriteStore";
-
+import { useAuthStore } from "../../store/useAuthStore";
+import { productService } from "../../services/productService";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 type RootStackParamList = {
   Product: { id: string };
@@ -44,9 +45,36 @@ interface Props {
 export const ProductDetailsScreen = ({ navigation, route }: Props) => {
   const { id } = route.params;
   const { toggleFavorite, isFavorite: checkIsFavorite } = useFavoritesStore();
+  const { user } = useAuthStore();
   const [quantity, setQuantity] = useState(1);
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const product = products.find((p) => p.id === id);
+  useEffect(() => {
+    loadProduct();
+  }, [id]);
+
+  const loadProduct = async () => {
+    setLoading(true);
+    try {
+      const data = await productService.getProduct(id);
+      setProduct(data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.screen}>
+        <View style={styles.notFoundContainer}>
+          <Text style={styles.notFoundText}>Carregando...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!product) {
     return (
@@ -60,17 +88,19 @@ export const ProductDetailsScreen = ({ navigation, route }: Props) => {
 
   const allPlaces = [...suggestions, ...popularPlaces];
   const relatedPlace = allPlaces.find(
-    (place) => place.sellerName === product.seller
+    (place) => place.sellerName === product.sellerName,
   );
 
   const handleToggleFavorite = () => {
-    // Encontrar a imagem correta do produto
+    if (!user?.id) return;
+
     const placeImage = relatedPlace?.image || product.image;
 
+    // toggleFavorite in the store expects a FavoritePlace object (no user id)
     toggleFavorite({
       id: product.id,
       title: product.title,
-      rating: 0, // Produtos não têm rating, usar 0
+      rating: 0,
       image: placeImage,
     });
   };
@@ -81,8 +111,11 @@ export const ProductDetailsScreen = ({ navigation, route }: Props) => {
       `${quantity}x ${product.title}\nTotal: R$ ${(product.price * quantity).toFixed(2)}`,
       [
         { text: "Cancelar", onPress: () => {}, style: "cancel" },
-        { text: "Confirmar", onPress: () => navigation.navigate("Home" as never) },
-      ]
+        {
+          text: "Confirmar",
+          onPress: () => (navigation as any).navigate("Home"),
+        },
+      ],
     );
   };
 
@@ -93,10 +126,7 @@ export const ProductDetailsScreen = ({ navigation, route }: Props) => {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        scrollEventThrottle={16}
-      >
+      <ScrollView showsVerticalScrollIndicator={false} scrollEventThrottle={16}>
         {/* Hero Image */}
         <ImageBackground
           source={
@@ -131,8 +161,16 @@ export const ProductDetailsScreen = ({ navigation, route }: Props) => {
               >
                 <Heart
                   size={20}
-                  color={checkIsFavorite(product.id) ? colors.destructive : colors.foreground}
-                  fill={checkIsFavorite(product.id) ? colors.destructive : "transparent"}
+                  color={
+                    checkIsFavorite(product.id)
+                      ? colors.destructive
+                      : colors.foreground
+                  }
+                  fill={
+                    checkIsFavorite(product.id)
+                      ? colors.destructive
+                      : "transparent"
+                  }
                 />
               </TouchableOpacity>
             </View>
@@ -154,9 +192,7 @@ export const ProductDetailsScreen = ({ navigation, route }: Props) => {
 
             {/* Price */}
             <View style={styles.priceSection}>
-              <Text style={styles.price}>
-                R$ {product.price.toFixed(2)}
-              </Text>
+              <Text style={styles.price}>R$ {product.price.toFixed(2)}</Text>
               <View style={styles.priceLabel}>
                 <ShoppingBag
                   size={14}
@@ -187,7 +223,7 @@ export const ProductDetailsScreen = ({ navigation, route }: Props) => {
               </View>
               <View style={styles.sellerInfo}>
                 <Text style={styles.sellerLabel}>Vendedor</Text>
-                <Text style={styles.sellerName}>{product.seller}</Text>
+                <Text style={styles.sellerName}>{product.sellerName}</Text>
               </View>
             </View>
 

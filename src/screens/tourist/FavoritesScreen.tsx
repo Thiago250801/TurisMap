@@ -1,52 +1,118 @@
+import { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Alert,
+  LayoutAnimation,
+  Animated,
 } from "react-native";
 import { PlaceCard } from "../../components/PlaceCard";
 import { colors, fontFamily, radius } from "../../theme";
 import { useFavoritesStore } from "../../store/useFavoriteStore";
-import { Heart } from "lucide-react-native";
-import { Alert, LayoutAnimation, UIManager, Platform } from "react-native";
-import { useState } from "react";
+import { useAuthStore } from "../../store/useAuthStore";
+import { getPlaceImage } from "../../hooks/usePlace";
+import { Heart, Undo2 } from "lucide-react-native";
+
+interface RemovedFavorite {
+  id: string;
+  title: string;
+  rating: number;
+}
 
 export const FavoritesScreen = () => {
+  const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [lastRemoved, setLastRemoved] = useState<RemovedFavorite | null>(null);
   const [snackBarVisible, setSnackBarVisible] = useState(false);
-  const [lastRemoved, setLastRemoved] = useState<any>(null);
-  let undoTimeout: NodeJS.Timeout;
 
+  const { user } = useAuthStore();
   const favorites = useFavoritesStore((state) => state.favorites);
-  const removeFavorite = useFavoritesStore((state) => state.removeFavorite);
-  const restoreFavorite = useFavoritesStore((state) => state.restoreFavorite);
+  const removeFavoriteRemote = useFavoritesStore(
+    (state) => state.removeFavoriteRemote,
+  );
+  const addFavoriteRemote = useFavoritesStore(
+    (state) => state.addFavoriteRemote,
+  );
+  const loadFavorites = useFavoritesStore((state) => state.loadFavorites);
 
-  const handleRemove = (id: string) => {
+  useEffect(() => {
+    if (user?.id) {
+      loadFavorites(user.id);
+    }
+  }, [user?.id]);
+
+  // Limpa timeout ao desmontar
+  useEffect(() => {
+    return () => {
+      if (undoTimeoutRef.current) {
+        clearTimeout(undoTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleRemove = async (id: string) => {
+    if (!user?.id) return;
+
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
 
-    const removed = removeFavorite(id);
+    // Encontra o lugar que vai ser removido
+    const place = favorites.find((p) => p.id === id);
+    if (!place) return;
 
-    if (!removed) return;
+    // Salva para undo
+    setLastRemoved({
+      id: place.id,
+      title: place.title,
+      rating: place.rating,
+    });
 
-    setLastRemoved(removed);
+    // Limpa timeout anterior se existir
+    if (undoTimeoutRef.current) {
+      clearTimeout(undoTimeoutRef.current);
+    }
+
     setSnackBarVisible(true);
 
-    undoTimeout = setTimeout(() => {
+    // Define timeout de 5 segundos para remover definitivamente
+    undoTimeoutRef.current = setTimeout(async () => {
+      try {
+        await removeFavoriteRemote(user.id, id);
+        setSnackBarVisible(false);
+        setLastRemoved(null);
+      } catch (error) {
+        Alert.alert("Erro", "Falha ao remover favorito");
+      }
+    }, 5000);
+  };
+
+  const handleUndo = async () => {
+    if (!user?.id || !lastRemoved) return;
+
+    // Limpa timeout
+    if (undoTimeoutRef.current) {
+      clearTimeout(undoTimeoutRef.current);
+      undoTimeoutRef.current = null;
+    }
+
+    // Recoloca o favorito
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+
+    try {
+      const localImage = getPlaceImage(lastRemoved.id);
+      await addFavoriteRemote(user.id, {
+        id: lastRemoved.id,
+        title: lastRemoved.title,
+        rating: lastRemoved.rating,
+        image: localImage || "",
+      });
       setSnackBarVisible(false);
       setLastRemoved(null);
-    }, 4000);
+    } catch (error) {
+      Alert.alert("Erro", "Falha ao restaurar favorito");
+    }
   };
-
-  const handleUndo = () => {
-    if (!lastRemoved) return;
-
-    restoreFavorite(lastRemoved);
-    setLastRemoved(null);
-    setSnackBarVisible(false);
-
-    clearTimeout(undoTimeout);
-  };
-
 
   const confirmRemove = (id: string) => {
     Alert.alert(
@@ -59,13 +125,12 @@ export const FavoritesScreen = () => {
           style: "destructive",
           onPress: () => handleRemove(id),
         },
-      ]
+      ],
     );
   };
 
   return (
     <View style={styles.screen}>
-      {/* HEADER */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <View style={styles.icon}>
@@ -73,34 +138,54 @@ export const FavoritesScreen = () => {
           </View>
           <Text style={styles.title}>Favoritos</Text>
         </View>
+        <Text style={styles.count}>{favorites.length} salvos</Text>
       </View>
 
-      {/* CONTENT */}
       {favorites.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyText}>Nenhum local favoritado ainda 🌿</Text>
+          <View style={styles.emptyIcon}>
+            <Heart size={48} color={colors.mutedForeground} />
+          </View>
+          <Text style={styles.emptyTitle}>Nenhum favorito ainda</Text>
+          <Text style={styles.emptyText}>
+            Explore lugares e produtos e adicione aos favoritos
+          </Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.container}>
-          {favorites.map((place) => (
-            <PlaceCard
-              key={place.id}
-              title={place.title}
-              rating={place.rating}
-              image={place.image}
-              showRemoveButton
-              onRemove={() => confirmRemove(place.id)}
-            />
-          ))}
+          {favorites.map((place) => {
+            const localImage = getPlaceImage(place.id);
+
+            return (
+              <PlaceCard
+                key={place.id}
+                title={place.title}
+                rating={place.rating}
+                image={localImage}
+                showRemoveButton
+                onRemove={() => confirmRemove(place.id)}
+              />
+            );
+          })}
         </ScrollView>
       )}
-      {snackBarVisible && (
-        <View style={styles.snackbar}>
-          <Text style={styles.snackbarText}>Removido dos favoritos</Text>
 
-          <TouchableOpacity onPress={handleUndo}>
-            <Text style={styles.undo}>DESFAZER</Text>
-          </TouchableOpacity>
+      {/* Snackbar de undo */}
+      {snackBarVisible && lastRemoved && (
+        <View style={styles.snackBar}>
+          <View style={styles.snackBarContent}>
+            <Text style={styles.snackBarText}>
+              {lastRemoved.title} removido
+            </Text>
+            <TouchableOpacity
+              onPress={handleUndo}
+              style={styles.undoButton}
+              activeOpacity={0.7}
+            >
+              <Undo2 size={16} color={colors.primary} />
+              <Text style={styles.undoButtonText}>Desfazer</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
     </View>
@@ -119,6 +204,9 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     borderBottomWidth: 1,
     borderColor: colors.border,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
 
   headerContent: {
@@ -142,43 +230,89 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.semiBold,
   },
 
+  count: {
+    fontSize: 13,
+    color: colors.mutedForeground,
+    fontFamily: fontFamily.medium,
+  },
+
   container: {
     padding: 24,
-    gap: 24,
+    gap: 16,
+    paddingBottom: 100,
   },
 
   empty: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 32,
+    gap: 12,
+  },
+
+  emptyIcon: {
+    marginBottom: 8,
+  },
+
+  emptyTitle: {
+    fontSize: 18,
+    fontFamily: fontFamily.semiBold,
+    color: colors.foreground,
   },
 
   emptyText: {
     color: colors.mutedForeground,
-    fontFamily: fontFamily.medium,
-    fontSize: 16,
+    fontFamily: fontFamily.regular,
+    fontSize: 14,
+    textAlign: "center",
   },
 
-  snackbar: {
+  snackBar: {
     position: "absolute",
     bottom: 24,
     left: 24,
     right: 24,
     backgroundColor: colors.card,
+    borderRadius: radius.lg,
     padding: 16,
-    borderRadius: 12,
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    elevation: 6,
+    justifyContent: "space-between",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.primary,
   },
 
-  snackbarText: {
+  snackBarContent: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  snackBarText: {
+    fontSize: 14,
     color: colors.foreground,
     fontFamily: fontFamily.medium,
+    flex: 1,
   },
 
-  undo: {
+  undoButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radius.md,
+    backgroundColor: colors.muted,
+  },
+
+  undoButtonText: {
+    fontSize: 13,
     color: colors.primary,
     fontFamily: fontFamily.semiBold,
   },

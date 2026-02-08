@@ -3,11 +3,10 @@ import {
   View,
   Text,
   StyleSheet,
-  Image,
   ScrollView,
   TouchableOpacity,
   ImageBackground,
-  SafeAreaView,
+  ActivityIndicator,
 } from "react-native";
 import {
   ArrowLeft,
@@ -16,29 +15,26 @@ import {
   MapPin,
   Star,
   Clock,
-  Plus,
   Store,
 } from "lucide-react-native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RouteProp } from "@react-navigation/native";
+import { AppStackParamList } from "../../routes/types";
 import { colors, fontFamily, radius } from "../../theme";
-import { suggestions, popularPlaces, products } from "../../data/mockData";
-import { ProductCard } from "../../components/ProductCard";
+import { suggestions, popularPlaces } from "../../data/mockData";
+import { ProductCard, ProductCardData } from "../../components/ProductCard";
 import { Button } from "../../components/Button";
 import { useFavoritesStore } from "../../store/useFavoriteStore";
-
-type RootStackParamList = {
-  Place: { id: string };
-  Product: { id: string };
-  Home: undefined;
-};
+import { useAuthStore } from "../../store/useAuthStore";
+import { useProductsStore } from "../../store/useProductsStore";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 type PlaceDetailsScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
+  AppStackParamList,
   "Place"
 >;
 
-type PlaceDetailsScreenRouteProp = RouteProp<RootStackParamList, "Place">;
+type PlaceDetailsScreenRouteProp = RouteProp<AppStackParamList, "Place">;
 
 interface Props {
   navigation: PlaceDetailsScreenNavigationProp;
@@ -47,12 +43,20 @@ interface Props {
 
 export const PlaceDetailsScreen = ({ navigation, route }: Props) => {
   const { id } = route.params;
-  const { favorites, toggleFavorite, isFavorite } = useFavoritesStore();
+  const { toggleFavorite, isFavorite } = useFavoritesStore();
+  const { user } = useAuthStore();
+  const { products, loadProductsByPlace, isLoading } = useProductsStore();
 
   const allPlaces = [...suggestions, ...popularPlaces];
   const place = allPlaces.find((p) => p.id === id);
 
-  const relatedProducts = products.slice(0, 2);
+  useEffect(() => {
+    if (id) {
+      loadProductsByPlace(id);
+    }
+  }, [id, loadProductsByPlace]);
+
+  const relatedProducts = products.slice(0, 3);
 
   if (!place) {
     return (
@@ -64,7 +68,10 @@ export const PlaceDetailsScreen = ({ navigation, route }: Props) => {
     );
   }
 
-  const handleToggleFavorite = () => {
+  const handleToggleFavorite = async () => {
+    if (!user?.id) return;
+
+    // toggleFavorite accepts a FavoritePlace object; user id is not required
     toggleFavorite({
       id: place.id,
       title: place.title,
@@ -74,31 +81,33 @@ export const PlaceDetailsScreen = ({ navigation, route }: Props) => {
   };
 
   const handleAddToPlan = () => {
-    // TODO: Implementar lógica de adicionar ao plano
-    navigation.navigate("Home" as never);
+    navigation.navigate("Home" as any);
   };
 
   const favoriteStatus = isFavorite(place.id);
 
+  const productCardData = (product: any): ProductCardData => ({
+    id: product.id,
+    title: product.title,
+    price: product.price,
+    description: product.description,
+    image: product.image,
+    sellerName: product.sellerName,
+    available: product.available,
+  });
+
   return (
     <SafeAreaView style={styles.screen}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        scrollEventThrottle={16}
-      >
-        {/* Hero Image */}
+      <ScrollView showsVerticalScrollIndicator={false} scrollEventThrottle={16}>
         <ImageBackground
           source={
-            typeof place.image === "string"
-              ? { uri: place.image }
-              : place.image
+            typeof place.image === "string" ? { uri: place.image } : place.image
           }
           style={styles.hero}
           imageStyle={styles.heroImage}
         >
           <View style={styles.heroOverlay} />
 
-          {/* Header Actions */}
           <View style={styles.headerActions}>
             <TouchableOpacity
               style={styles.actionButton}
@@ -120,7 +129,9 @@ export const PlaceDetailsScreen = ({ navigation, route }: Props) => {
               >
                 <Heart
                   size={20}
-                  color={favoriteStatus ? colors.destructive : colors.foreground}
+                  color={
+                    favoriteStatus ? colors.destructive : colors.foreground
+                  }
                   fill={favoriteStatus ? colors.destructive : "transparent"}
                 />
               </TouchableOpacity>
@@ -128,9 +139,7 @@ export const PlaceDetailsScreen = ({ navigation, route }: Props) => {
           </View>
         </ImageBackground>
 
-        {/* Content */}
         <View style={styles.contentWrapper}>
-          {/* Main Info Card */}
           <View style={styles.infoCard}>
             <View style={styles.titleSection}>
               <View style={styles.titleContent}>
@@ -152,10 +161,8 @@ export const PlaceDetailsScreen = ({ navigation, route }: Props) => {
               </View>
             </View>
 
-            {/* Description */}
             <Text style={styles.description}>{place.description}</Text>
 
-            {/* Info Row */}
             <View style={styles.infoDivider} />
             <View style={styles.infoRow}>
               <View style={styles.infoItem}>
@@ -167,67 +174,55 @@ export const PlaceDetailsScreen = ({ navigation, route }: Props) => {
                 <Text style={styles.infoText}>2.5 km</Text>
               </View>
             </View>
+          </View>
 
-            {/* Seller Info */}
-            {place.sellerName && (
-              <>
-                <View style={styles.infoDivider} />
-                <View style={styles.sellerSection}>
-                  <View
-                    style={[
-                      styles.sellerIcon,
-                      { backgroundColor: `${colors.primary}20` },
-                    ]}
-                  >
-                    <Store size={18} color={colors.primary} />
-                  </View>
-                  <View style={styles.sellerInfo}>
-                    <Text style={styles.sellerLabel}>Vendedor parceiro</Text>
-                    <Text style={styles.sellerName}>{place.sellerName}</Text>
-                  </View>
-                </View>
-              </>
+          <View style={styles.productsSection}>
+            <Text style={styles.sectionTitle}>Produtos disponíveis</Text>
+
+            {isLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color={colors.primary} />
+              </View>
+            ) : relatedProducts.length > 0 ? (
+              relatedProducts.map((product) => (
+                <TouchableOpacity
+                  key={product.id}
+                  onPress={() =>
+                    navigation.navigate(
+                      "Product" as any,
+                      { id: product.id } as any,
+                    )
+                  }
+                  activeOpacity={0.9}
+                >
+                  <ProductCard
+                    product={productCardData(product)}
+                    showBuyButton={true}
+                    onPress={() =>
+                      navigation.navigate(
+                        "Product" as any,
+                        { id: product.id } as any,
+                      )
+                    }
+                  />
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View style={styles.emptyProducts}>
+                <Store size={32} color={colors.mutedForeground} />
+                <Text style={styles.emptyText}>
+                  Nenhum produto cadastrado ainda
+                </Text>
+              </View>
             )}
           </View>
 
-          {/* Related Products */}
-          <View style={styles.productsSection}>
-            <Text style={styles.sectionTitle}>Experiências relacionadas</Text>
-
-            {relatedProducts.map((product) => (
-              <TouchableOpacity
-                key={product.id}
-                onPress={() =>
-                  navigation.navigate("Product", {
-                    id: product.id,
-                  })
-                }
-                activeOpacity={0.9}
-              >
-                <ProductCard
-                  product={product}
-                  showBuyButton={true}
-                  onPress={() =>
-                    navigation.navigate("Product", {
-                      id: product.id,
-                    } )
-                  }
-                />
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Spacing for bottom button */}
           <View style={styles.bottomSpacing} />
         </View>
       </ScrollView>
 
-      {/* Bottom Action Button */}
       <View style={styles.bottomButton}>
-        <Button
-          title="Adicionar ao Plano"
-          onPress={handleAddToPlan}
-        />
+        <Button title="Adicionar ao Plano" onPress={handleAddToPlan} />
       </View>
     </SafeAreaView>
   );
@@ -375,37 +370,6 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.regular,
   },
 
-  sellerSection: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-
-  sellerIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.lg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  sellerInfo: {
-    flex: 1,
-  },
-
-  sellerLabel: {
-    fontSize: 12,
-    color: colors.mutedForeground,
-    fontFamily: fontFamily.regular,
-  },
-
-  sellerName: {
-    fontSize: 14,
-    color: colors.foreground,
-    fontFamily: fontFamily.semiBold,
-    marginTop: 2,
-  },
-
   productsSection: {
     gap: 12,
     marginBottom: 24,
@@ -415,6 +379,27 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: fontFamily.semiBold,
     color: colors.foreground,
+  },
+
+  emptyProducts: {
+    alignItems: "center",
+    paddingVertical: 32,
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 12,
+  },
+
+  emptyText: {
+    fontSize: 14,
+    color: colors.mutedForeground,
+    fontFamily: fontFamily.regular,
+  },
+
+  loadingContainer: {
+    paddingVertical: 32,
+    alignItems: "center",
   },
 
   bottomSpacing: {

@@ -1,19 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  TextInput,
-  ScrollView,
   FlatList,
   Pressable,
+  ActivityIndicator,
 } from "react-native";
-import { Search, MapPin } from "lucide-react-native";
+import { MapPin, ShoppingBag } from "lucide-react-native";
 import { colors, fontFamily, radius } from "../../theme";
-import { suggestions, popularPlaces, products } from "../../data/mockData";
+import { suggestions } from "../../data/mockData";
 import { PlaceCard } from "../../components/PlaceCard";
-import { ProductCard } from "../../components/ProductCard";
+import { ProductCard, ProductCardData } from "../../components/ProductCard";
 import { useNavigation, NavigationProp } from "@react-navigation/native";
+import { SearchBar } from "../../components/SearchBar";
+import { useProductsStore } from "../../store/useProductsStore";
 
 type RootStackParamList = {
   Place: { id: string };
@@ -25,18 +26,24 @@ export const SearchScreen = () => {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<"places" | "products">("places");
 
-  const allPlaces = [...suggestions, ...popularPlaces];
+  const { products, loadAvailableProducts, isLoading } = useProductsStore();
+
+  useEffect(() => {
+    loadAvailableProducts();
+  }, []);
+
+  const allPlaces = [...suggestions];
 
   const filteredPlaces = allPlaces.filter(
     (place) =>
       place.title.toLowerCase().includes(search.toLowerCase()) ||
-      place.location.toLowerCase().includes(search.toLowerCase()),
+      place.location.toLowerCase().includes(search.toLowerCase())
   );
 
   const filteredProducts = products.filter(
     (product) =>
       product.title.toLowerCase().includes(search.toLowerCase()) ||
-      product.description.toLowerCase().includes(search.toLowerCase()),
+      product.description.toLowerCase().includes(search.toLowerCase())
   );
 
   const handlePlacePress = (placeId: string) => {
@@ -47,30 +54,41 @@ export const SearchScreen = () => {
     navigation.navigate("Product", { id: productId });
   };
 
+  const productCardData = (product: any): ProductCardData => ({
+    id: product.id,
+    title: product.title,
+    price: product.price,
+    description: product.description,
+    image: product.image,
+    sellerName: product.sellerName,
+    available: product.available,
+  });
+
   return (
     <View style={styles.screen}>
-      {/* Header com SearchBar */}
       <View style={styles.header}>
         <Text style={styles.title}>Buscar</Text>
 
-        <View style={styles.searchContainer}>
-          <Search size={18} color={colors.mutedForeground} />
-          <TextInput
-            style={styles.input}
-            placeholder="Buscar lugares, produtos..."
-            placeholderTextColor={colors.mutedForeground}
-            value={search}
-            onChangeText={setSearch}
-          />
-        </View>
+        <SearchBar
+          value={search}
+          onChange={setSearch}
+          placeholder="Buscar lugares, produtos..."
+        />
       </View>
 
-      {/* Tabs */}
       <View style={styles.tabsContainer}>
         <Pressable
           style={[styles.tab, activeTab === "places" && styles.tabActive]}
           onPress={() => setActiveTab("places")}
         >
+          <MapPin
+            size={16}
+            color={
+              activeTab === "places"
+                ? colors.primaryForeground
+                : colors.mutedForeground
+            }
+          />
           <Text
             style={[
               styles.tabText,
@@ -85,6 +103,14 @@ export const SearchScreen = () => {
           style={[styles.tab, activeTab === "products" && styles.tabActive]}
           onPress={() => setActiveTab("products")}
         >
+          <ShoppingBag
+            size={16}
+            color={
+              activeTab === "products"
+                ? colors.primaryForeground
+                : colors.mutedForeground
+            }
+          />
           <Text
             style={[
               styles.tabText,
@@ -96,7 +122,6 @@ export const SearchScreen = () => {
         </Pressable>
       </View>
 
-      {/* Content */}
       {activeTab === "places" ? (
         <FlatList
           data={filteredPlaces}
@@ -120,25 +145,37 @@ export const SearchScreen = () => {
           }
         />
       ) : (
-        <FlatList
-          data={filteredProducts}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => (
-            <Pressable onPress={() => handleProductPress(item.id)}>
-              <ProductCard
-                product={item}
-                onPress={() => handleProductPress(item.id)}
-              />
-            </Pressable>
-          )}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <MapPin size={48} color={colors.mutedForeground} />
-              <Text style={styles.emptyText}>Nenhum produto encontrado</Text>
+        <>
+          {isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={styles.loadingText}>Carregando produtos...</Text>
             </View>
-          }
-        />
+          ) : (
+            <FlatList
+              data={filteredProducts}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.listContent}
+              renderItem={({ item }) => (
+                <Pressable onPress={() => handleProductPress(item.id)}>
+                  <ProductCard
+                    product={productCardData(item)}
+                    onPress={() => handleProductPress(item.id)}
+                  />
+                </Pressable>
+              )}
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <ShoppingBag size={48} color={colors.mutedForeground} />
+                  <Text style={styles.emptyText}>Nenhum produto encontrado</Text>
+                  <Text style={styles.emptySubtext}>
+                    Os comerciantes ainda não cadastraram produtos
+                  </Text>
+                </View>
+              }
+            />
+          )}
+        </>
       )}
     </View>
   );
@@ -151,9 +188,10 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingHorizontal: 24,
+    paddingTop: 56,
     paddingBottom: 16,
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
     borderColor: colors.border,
   },
@@ -165,25 +203,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.card,
-    borderRadius: radius.xl,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-
-  input: {
-    flex: 1,
-    fontFamily: fontFamily.regular,
-    fontSize: 14,
-    color: colors.foreground,
-  },
-
   tabsContainer: {
     flexDirection: "row",
     paddingHorizontal: 16,
@@ -193,11 +212,14 @@ const styles = StyleSheet.create({
 
   tab: {
     flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: radius.lg,
     backgroundColor: colors.muted,
-    alignItems: "center",
   },
 
   tabActive: {
@@ -230,8 +252,28 @@ const styles = StyleSheet.create({
   },
 
   emptyText: {
-    fontFamily: fontFamily.medium,
+    fontFamily: fontFamily.semiBold,
     fontSize: 16,
+    color: colors.foreground,
+  },
+
+  emptySubtext: {
+    fontFamily: fontFamily.regular,
+    fontSize: 14,
     color: colors.mutedForeground,
+    textAlign: "center",
+  },
+
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  loadingText: {
+    fontSize: 14,
+    color: colors.mutedForeground,
+    fontFamily: fontFamily.medium,
   },
 });

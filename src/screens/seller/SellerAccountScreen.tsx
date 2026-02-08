@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import {
   View,
   Text,
@@ -6,40 +6,36 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  FlatList,
 } from "react-native";
 import {
   User,
-  Heart,
-  History,
+  Store,
+  Package,
   Settings,
   HelpCircle,
   LogOut,
   ChevronRight,
-  MapPin,
+  Key,
 } from "lucide-react-native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { colors, fontFamily, radius } from "../../theme";
-import { useFavoritesStore } from "../../store/useFavoriteStore";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthStore } from "../../store/useAuthStore";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { usePlacesStore } from "../../store/usePlacesStore";
 
 type RootStackParamList = {
-  Account: undefined;
-  Favorites: undefined;
-  History: undefined;
-  Home: undefined;
+  SellerAccount: undefined;
+  SellerVitrine: undefined;
+  SellerProducts: undefined;
   Auth: undefined;
 };
 
-type AccountScreenNavigationProp = NativeStackNavigationProp<
+type SellerAccountScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
-  "Account"
+  "SellerAccount"
 >;
 
 interface Props {
-  navigation: AccountScreenNavigationProp;
+  navigation: SellerAccountScreenNavigationProp;
 }
 
 interface MenuItem {
@@ -51,34 +47,40 @@ interface MenuItem {
   color: string;
 }
 
-export const AccountScreen = ({ navigation }: Props) => {
-  const { favorites } = useFavoritesStore();
-  const { all } = usePlacesStore();
-  const { user, logout, isLoading } = useAuthStore();
-
-  const stats = [
-    { label: "Lugares", value: all.length.toString() },
-    { label: "Roteiros", value: "3" },
-    { label: "Favoritos", value: favorites.length.toString() },
-  ];
+export const SellerAccountScreen = ({ navigation }: Props) => {
+  const insets = useSafeAreaInsets();
+  const { logout, isLoading, user } = useAuthStore();
 
   const menuItems: MenuItem[] = useMemo(
     () => [
       {
-        id: "favorites",
-        icon: <Heart size={20} color={colors.destructive} />,
-        label: "Favoritos",
-        description: `${favorites.length} lugares salvos`,
-        onPress: () => navigation.navigate("FavoritesTab" as never),
-        color: colors.destructive,
+        id: "store",
+        icon: <Store size={20} color={colors.primary} />,
+        label: "Minha Loja",
+        description: "Configurações da loja",
+        onPress: () => navigation.navigate("SellerVitrine" as never),
+        color: colors.primary,
       },
       {
-        id: "history",
-        icon: <History size={20} color={colors.primary} />,
-        label: "Histórico",
-        description: "Lugares visitados",
-        onPress: () => navigation.navigate("History" as never),
+        id: "products",
+        icon: <Package size={20} color={colors.primary} />,
+        label: "Produtos",
+        description: "Gerenciar catálogo",
+        onPress: () => navigation.navigate("SellerProducts" as never),
         color: colors.primary,
+      },
+      {
+        id: "password",
+        icon: <Key size={20} color={colors.mutedForeground} />,
+        label: "Alterar Senha",
+        description: "Segurança da conta",
+        onPress: () => {
+          Alert.alert(
+            "Em desenvolvimento",
+            "Esta funcionalidade será implementada em breve"
+          );
+        },
+        color: colors.mutedForeground,
       },
       {
         id: "settings",
@@ -86,7 +88,10 @@ export const AccountScreen = ({ navigation }: Props) => {
         label: "Configurações",
         description: "Preferências do app",
         onPress: () => {
-          // TODO: Implementar
+          Alert.alert(
+            "Em desenvolvimento",
+            "Esta funcionalidade será implementada em breve"
+          );
         },
         color: colors.mutedForeground,
       },
@@ -96,23 +101,26 @@ export const AccountScreen = ({ navigation }: Props) => {
         label: "Ajuda",
         description: "Suporte e FAQ",
         onPress: () => {
-          // TODO: Implementar
+          Alert.alert(
+            "Em desenvolvimento",
+            "Esta funcionalidade será implementada em breve"
+          );
         },
         color: colors.mutedForeground,
       },
     ],
-    [favorites.length, navigation]
+    [navigation]
   );
 
   const handleLogout = async () => {
     Alert.alert("Sair da conta", "Tem certeza que deseja sair?", [
       {
         text: "Cancelar",
-        onPress: () => {},
         style: "cancel",
       },
       {
         text: "Sair",
+        style: "destructive",
         onPress: async () => {
           try {
             await logout();
@@ -120,13 +128,12 @@ export const AccountScreen = ({ navigation }: Props) => {
             Alert.alert("Erro", "Falha ao fazer logout");
           }
         },
-        style: "destructive",
       },
     ]);
   };
 
   return (
-    <SafeAreaView style={styles.screen}>
+    <View style={[styles.screen, { paddingTop: insets.top }]}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Minha Conta</Text>
@@ -134,7 +141,10 @@ export const AccountScreen = ({ navigation }: Props) => {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: insets.bottom + 24 },
+        ]}
       >
         {/* Profile Card */}
         <View style={styles.profileCard}>
@@ -144,25 +154,15 @@ export const AccountScreen = ({ navigation }: Props) => {
             </View>
 
             <View style={styles.profileInfo}>
-              <Text style={styles.profileName}>{user?.name || "Viajante"}</Text>
-              <Text style={styles.profileEmail}>{user?.email || "viajante@turismap.com"}</Text>
+              <Text style={styles.profileName}>{user?.name || "Vendedor"}</Text>
+              <Text style={styles.profileEmail}>{user?.email || "vendedor@turismap.com"}</Text>
 
-              <View style={styles.locationTag}>
-                <MapPin size={12} color={colors.primary} />
-                <Text style={styles.locationText}>Manaus, AM</Text>
+              <View style={styles.typeTag}>
+                <Store size={12} color={colors.primary} />
+                <Text style={styles.typeText}>Comerciante</Text>
               </View>
             </View>
           </View>
-        </View>
-
-        {/* Stats Grid */}
-        <View style={styles.statsGrid}>
-          {stats.map((stat, index) => (
-            <View key={stat.label} style={styles.statCard}>
-              <Text style={styles.statValue}>{stat.value}</Text>
-              <Text style={styles.statLabel}>{stat.label}</Text>
-            </View>
-          ))}
         </View>
 
         {/* Menu Items */}
@@ -176,6 +176,7 @@ export const AccountScreen = ({ navigation }: Props) => {
               ]}
               onPress={item.onPress}
               activeOpacity={0.6}
+              disabled={isLoading}
             >
               <View style={styles.menuItemContent}>
                 <View
@@ -213,7 +214,7 @@ export const AccountScreen = ({ navigation }: Props) => {
           </Text>
         </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -224,10 +225,8 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    paddingHorizontal: 24,
-    paddingTop: 56,
-    paddingBottom: 16,
-    backgroundColor: colors.background,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderColor: colors.border,
   },
@@ -241,7 +240,6 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 16,
     paddingVertical: 16,
-    paddingBottom: 120,
     gap: 24,
   },
 
@@ -285,47 +283,17 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.regular,
   },
 
-  locationTag: {
+  typeTag: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
     marginTop: 4,
   },
 
-  locationText: {
+  typeText: {
     fontSize: 12,
     fontFamily: fontFamily.medium,
     color: colors.primary,
-  },
-
-  statsGrid: {
-    flexDirection: "row",
-    gap: 12,
-    justifyContent: "space-between",
-  },
-
-  statCard: {
-    flex: 1,
-    backgroundColor: colors.card,
-    borderRadius: radius.xl,
-    padding: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-
-  statValue: {
-    fontSize: 24,
-    fontFamily: fontFamily.bold,
-    color: colors.primary,
-  },
-
-  statLabel: {
-    fontSize: 12,
-    color: colors.mutedForeground,
-    fontFamily: fontFamily.regular,
-    marginTop: 8,
   },
 
   menuContainer: {
@@ -390,7 +358,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     backgroundColor: `${colors.destructive}15`,
     gap: 8,
-    marginTop: 12,
   },
 
   logoutButtonDisabled: {

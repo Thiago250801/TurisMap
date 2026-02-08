@@ -1,500 +1,431 @@
-import { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TextInput,
-  Pressable,
-  Image,
+  TouchableOpacity,
+  ScrollView,
   Alert,
-  Switch,
-  Platform,
   ActivityIndicator,
+  Image,
+  Platform,
 } from "react-native";
-import { useForm, Controller } from "react-hook-form";
-import { Check, WifiOff, AlertCircle, Calendar, Map } from "lucide-react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RouteProp } from "@react-navigation/native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, fontFamily, radius } from "../../theme";
-import { suggestions, popularPlaces } from "../../data/mockData";
 import { Button } from "../../components/Button";
 import { usePlansStore } from "../../store/usePlanStore";
+import { useAuthStore } from "../../store/useAuthStore";
+import { suggestions, popularPlaces } from "../../data/mockData";
+import { getPlaceImage } from "../../hooks/usePlace";
+import { ArrowLeft, MapPin, Calendar, Zap } from "lucide-react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
-type FormData = {
-  name: string;
-  startDate: Date | null;
-  endDate: Date | null;
-  offline: boolean;
+type RootStackParamList = {
+  CreatePlan: { id?: string } | undefined;
 };
 
-const formatDate = (date: Date | null): string => {
-  if (!date) return "";
-  return date.toLocaleDateString("pt-BR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-};
+type CreatePlanNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "CreatePlan"
+>;
 
-const isDateAfter = (start: Date | null, end: Date | null): boolean => {
-  if (!start || !end) return true;
-  return start <= end;
-};
+type CreatePlanRouteProp = RouteProp<RootStackParamList, "CreatePlan">;
 
-export const CreatePlanScreen = () => {
-  const { addPlan } = usePlansStore();
-  const [loading, setLoading] = useState(false);
+export const CreatePlanScreen = ({
+  navigation,
+  route,
+}: {
+  navigation: CreatePlanNavigationProp;
+  route: CreatePlanRouteProp;
+}) => {
+  const planId = route.params?.id;
+  const isEditing = !!planId;
+
+  const { plans, addPlan, updatePlan, loadPlans } = usePlansStore();
+  const { user } = useAuthStore();
+
+  const [name, setName] = useState("");
+  const [startDate, setStartDate] = useState(new Date());
+  const [endDate, setEndDate] = useState(new Date(new Date().getTime() + 86400000)); // Próximo dia
   const [selectedPlaces, setSelectedPlaces] = useState<string[]>([]);
+  const [syncOnline, setSyncOnline] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // DateTimePicker states
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
 
-  const {
-    control,
-    handleSubmit,
-    watch,
-    formState: { errors },
-  } = useForm<FormData>({
-    defaultValues: {
-      name: "",
-      startDate: null,
-      endDate: null,
-      offline: false,
-    },
-    mode: "onBlur",
-  });
-
-  const startDate = watch("startDate");
-  const endDate = watch("endDate");
+  // Combina suggestions e popularPlaces
   const allPlaces = [...suggestions, ...popularPlaces];
 
-  const togglePlace = (id: string) => {
-    setSelectedPlaces((prev) =>
-      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
-    );
+  // Função para formatar data em pt-BR
+  const formatDatePtBR = (date: Date) => {
+    return date.toLocaleDateString("pt-BR", {
+      weekday: "short",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
   };
 
-  const handleStartDateChange = (
-    event: any,
-    selectedDate?: Date,
-    fieldChange?: (value: Date | null) => void
-  ) => {
+  // Handler para DateTimePicker (funciona em iOS e Android)
+  const handleStartDateChange = (event: any, selectedDate?: Date) => {
     if (Platform.OS === "android") {
       setShowStartDatePicker(false);
     }
-    if (selectedDate && fieldChange) {
-      fieldChange(selectedDate);
+    if (selectedDate) {
+      setStartDate(selectedDate);
     }
   };
 
-  const handleEndDateChange = (
-    event: any,
-    selectedDate?: Date,
-    fieldChange?: (value: Date | null) => void
-  ) => {
+  const handleEndDateChange = (event: any, selectedDate?: Date) => {
     if (Platform.OS === "android") {
       setShowEndDatePicker(false);
     }
-    if (selectedDate && fieldChange) {
-      fieldChange(selectedDate);
+    if (selectedDate) {
+      setEndDate(selectedDate);
     }
   };
 
-  const onSubmit = async (data: FormData) => {
-    if (!data.startDate || !data.endDate) {
-      Alert.alert(
-        "Datas obrigatórias",
-        "Informe as datas de início e fim do roteiro"
-      );
+  useEffect(() => {
+    // Se está editando, carrega os dados do plano
+    if (isEditing && planId) {
+      const plan = plans.find((p) => p.id === planId);
+      if (plan) {
+        setName(plan.name);
+        setStartDate(new Date(plan.startDate));
+        setEndDate(new Date(plan.endDate));
+        setSelectedPlaces(plan.places || []);
+        setSyncOnline(!plan.offline);
+      }
+    }
+  }, [isEditing, planId, plans]);
+
+  const validateDates = () => {
+    return endDate >= startDate;
+  };
+
+  const togglePlace = (id: string) => {
+    setSelectedPlaces((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  };
+
+  const handleSave = async () => {
+    if (!user?.id) {
+      Alert.alert("Erro", "Usuário não autenticado");
+      return;
+    }
+
+    if (!name.trim()) {
+      Alert.alert("Validação", "Informe um nome para o roteiro");
+      return;
+    }
+
+    if (!validateDates()) {
+      Alert.alert("Validação", "A data final não pode ser antes da data inicial");
       return;
     }
 
     if (selectedPlaces.length === 0) {
-      Alert.alert(
-        "Selecione um local",
-        "Escolha pelo menos um lugar para o roteiro"
-      );
+      Alert.alert("Validação", "Selecione ao menos um lugar");
       return;
     }
 
-    if (!isDateAfter(data.startDate, data.endDate)) {
-      Alert.alert(
-        "Datas inválidas",
-        "A data de fim deve ser depois da data de início"
-      );
-      return;
-    }
-
-    setLoading(true);
+    setSaving(true);
     try {
-      addPlan({
-        id: `plan-${Date.now()}`,
-        name: data.name.trim(),
-        startDate: data.startDate.toISOString(),
-        endDate: data.endDate.toISOString(),
-        offline: data.offline,
+      const payload = {
+        name: name.trim(),
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        offline: !syncOnline,
         places: selectedPlaces,
-      });
+      };
 
-      Alert.alert("Sucesso!", "Seu roteiro foi salvo com sucesso", [
-        { text: "OK", onPress: () => {} },
-      ]);
+      if (isEditing && planId) {
+        await updatePlan(planId, payload);
+        Alert.alert("Sucesso", "Roteiro atualizado");
+      } else {
+        await addPlan(user.id, payload);
+        Alert.alert("Sucesso", "Roteiro criado");
+      }
+
+      // Recarrega e volta
+      await loadPlans(user.id);
+      navigation.goBack();
     } catch (error) {
-      Alert.alert("Erro", "Falha ao criar o roteiro. Tente novamente.");
+      console.error("Failed to save plan", error);
+      Alert.alert("Erro", "Falha ao salvar roteiro");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   return (
-    <View style={styles.screen}>
+    <SafeAreaView style={styles.screen}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <View style={styles.icon}>
-            <Map size={18} color={colors.primaryForeground} />
-          </View>
-          <Text style={styles.title}>Criar Roteiro</Text>
-        </View>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <ArrowLeft size={24} color={colors.foreground} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>
+          {isEditing ? "Editar Roteiro" : "Criar Roteiro"}
+        </Text>
+        <View style={{ width: 24 }} />
       </View>
 
       <ScrollView
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
       >
-        {/* Nome */}
-        <View style={styles.field}>
-          <Text style={styles.label}>Nome do roteiro</Text>
-          <Controller
-            control={control}
-            name="name"
-            rules={{
-              required: "Informe o nome do roteiro",
-              minLength: {
-                value: 3,
-                message: "Mínimo 3 caracteres",
-              },
-              maxLength: {
-                value: 50,
-                message: "Máximo 50 caracteres",
-              },
-            }}
-            render={({ field: { onChange, value } }) => (
-              <TextInput
-                style={[styles.input, errors.name && styles.inputError]}
-                placeholder="Ex: Fim de semana em Manaus"
-                value={value}
-                onChangeText={onChange}
-                maxLength={50}
-                placeholderTextColor={colors.mutedForeground}
-              />
-            )}
-          />
-          {errors.name && (
-            <View style={styles.errorContainer}>
-              <AlertCircle size={14} color={colors.destructive} />
-              <Text style={styles.error}>{errors.name.message}</Text>
-            </View>
-          )}
-        </View>
+        {/* Nome do Roteiro */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Informações Básicas</Text>
 
-        {/* Datas */}
-        <View style={styles.row}>
-          <View style={[styles.field, { flex: 1 }]}>
-            <Text style={styles.label}>Data início</Text>
-            <Controller
-              control={control}
-              name="startDate"
-              rules={{
-                required: "Obrigatório",
-              }}
-              render={({ field: { onChange, value } }) => (
-                <>
-                  <Pressable
-                    style={[
-                      styles.dateInput,
-                      errors.startDate && styles.inputError,
-                    ]}
-                    onPress={() => setShowStartDatePicker(true)}
-                  >
-                    <Calendar
-                      size={18}
-                      color={value ? colors.foreground : colors.mutedForeground}
-                    />
-                    <Text
-                      style={[
-                        styles.dateText,
-                        !value && styles.dateTextPlaceholder,
-                      ]}
-                    >
-                      {value ? formatDate(value) : "Selecionar data"}
-                    </Text>
-                  </Pressable>
-
-                  {showStartDatePicker && (
-                    <DateTimePicker
-                      accentColor={colors.primary}
-                      textColor={colors.foreground}
-                      value={value || new Date()}
-                      mode="date"
-                      display={Platform.OS === "ios" ? "spinner" : "default"}
-                      onChange={(event, selectedDate) =>
-                        handleStartDateChange(event, selectedDate, onChange)
-                      
-                      }
-                      locale="pt-BR"
-                    />
-                  )}
-
-                  {Platform.OS === "ios" && showStartDatePicker && (
-                    <Pressable
-                      style={styles.datePickerDone}
-                      onPress={() => setShowStartDatePicker(false)}
-                    >
-                      <Text style={styles.datePickerDoneText}>Pronto</Text>
-                    </Pressable>
-                  )}
-
-                  {errors.startDate && (
-                    <View style={styles.errorContainer}>
-                      <AlertCircle size={14} color={colors.destructive} />
-                      <Text style={styles.error}>
-                        {errors.startDate.message}
-                      </Text>
-                    </View>
-                  )}
-                </>
-              )}
+          <View style={styles.field}>
+            <Text style={styles.label}>Nome do roteiro *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ex: Roteiro cultural Manaus"
+              placeholderTextColor={colors.mutedForeground}
+              value={name}
+              onChangeText={setName}
             />
           </View>
 
-          <View style={[styles.field, { flex: 1 }]}>
-            <Text style={styles.label}>Data fim</Text>
-            <Controller
-              control={control}
-              name="endDate"
-              rules={{
-                required: "Obrigatório",
-              }}
-              render={({ field: { onChange, value } }) => (
-                <>
-                  <Pressable
-                    style={[
-                      styles.dateInput,
-                      errors.endDate && styles.inputError,
-                    ]}
-                    onPress={() => setShowEndDatePicker(true)}
-                  >
-                    <Calendar
-                      size={18}
-                      color={value ? colors.foreground : colors.mutedForeground}
-                    />
-                    <Text
-                      style={[
-                        styles.dateText,
-                        !value && styles.dateTextPlaceholder,
-                      ]}
-                    >
-                      {value ? formatDate(value) : "Selecionar data"}
-                    </Text>
-                  </Pressable>
+          {/* Datas com DateTimePicker */}
+          <View style={styles.row}>
+            <View style={{ flex: 1, marginRight: 8 }}>
+              <Text style={styles.label}>Data início *</Text>
+              <TouchableOpacity
+                style={styles.dateButton}
+                onPress={() => setShowStartDatePicker(true)}
+              >
+                <Calendar size={18} color={colors.primary} />
+                <Text style={styles.dateButtonText}>
+                  {formatDatePtBR(startDate)}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-                  {showEndDatePicker && (
-                    <DateTimePicker
-                      value={value || new Date()}
-                      mode="date"
-                      display={Platform.OS === "ios" ? "spinner" : "default"}
-                      onChange={(event, selectedDate) =>
-                        handleEndDateChange(event, selectedDate, onChange)
-                      }
-                      locale="pt-BR"
-                    />
-                  )}
-
-                  {Platform.OS === "ios" && showEndDatePicker && (
-                    <Pressable
-                      style={styles.datePickerDone}
-                      onPress={() => setShowEndDatePicker(false)}
-                    >
-                      <Text style={styles.datePickerDoneText}>Pronto</Text>
-                    </Pressable>
-                  )}
-
-                  {errors.endDate && (
-                    <View style={styles.errorContainer}>
-                      <AlertCircle size={14} color={colors.destructive} />
-                      <Text style={styles.error}>
-                        {errors.endDate.message}
-                      </Text>
-                    </View>
-                  )}
-                </>
-              )}
-            />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>Data fim *</Text>
+              <TouchableOpacity
+                style={styles.dateButton}
+                onPress={() => setShowEndDatePicker(true)}
+              >
+                <Calendar size={18} color={colors.primary} />
+                <Text style={styles.dateButtonText}>
+                  {formatDatePtBR(endDate)}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
-        {/* Validação de intervalo de datas */}
-        {startDate &&
-          endDate &&
-          !isDateAfter(startDate, endDate) && (
-            <View style={styles.warningContainer}>
-              <AlertCircle size={16} color={colors.destructive} />
-              <Text style={styles.warningText}>
-                Data de fim deve ser após a data de início
-              </Text>
-            </View>
-          )}
+        {/* Sincronização */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Sincronização</Text>
 
-        {/* Offline */}
-        <Controller
-          control={control}
-          name="offline"
-          render={({ field: { value, onChange } }) => (
-            <Pressable
-              style={styles.offlineCard}
-              onPress={() => onChange(!value)}
-            >
-              <View style={styles.offlineInfo}>
-                <WifiOff size={20} color={colors.primary} />
-                <View>
-                  <Text style={styles.offlineTitle}>Salvar offline</Text>
-                  <Text style={styles.offlineSubtitle}>
-                    Acesse sem internet
-                  </Text>
-                </View>
+          <TouchableOpacity
+            style={[
+              styles.syncCard,
+              syncOnline && styles.syncCardActive,
+            ]}
+            onPress={() => setSyncOnline(true)}
+          >
+            <View style={styles.syncCardContent}>
+              <View
+                style={[
+                  styles.syncIcon,
+                  syncOnline && styles.syncIconActive,
+                ]}
+              >
+                <Zap size={20} color={syncOnline ? colors.primary : colors.mutedForeground} />
               </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.syncTitle}>Sincronizar online</Text>
+                <Text style={styles.syncSubtitle}>
+                  Acesse seu roteiro em qualquer dispositivo
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.radioButton,
+                  syncOnline && styles.radioButtonSelected,
+                ]}
+              >
+                {syncOnline && <View style={styles.radioButtonDot} />}
+              </View>
+            </View>
+          </TouchableOpacity>
 
-              <Switch
-                value={value}
-                onValueChange={onChange}
-                trackColor={{
-                  false: colors.border,
-                  true: colors.primary,
-                }}
-                thumbColor={Platform.OS === "android" ? "#fff" : undefined}
-                accessible={true}
-                accessibilityLabel="Ativar modo offline"
-              />
-            </Pressable>
-          )}
-        />
+          <TouchableOpacity
+            style={[
+              styles.syncCard,
+              !syncOnline && styles.syncCardActive,
+            ]}
+            onPress={() => setSyncOnline(false)}
+          >
+            <View style={styles.syncCardContent}>
+              <View
+                style={[
+                  styles.syncIcon,
+                  !syncOnline && styles.syncIconActive,
+                ]}
+              >
+                <MapPin size={20} color={!syncOnline ? colors.primary : colors.mutedForeground} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.syncTitle}>Apenas offline</Text>
+                <Text style={styles.syncSubtitle}>
+                  Salvo apenas neste dispositivo
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.radioButton,
+                  !syncOnline && styles.radioButtonSelected,
+                ]}
+              >
+                {!syncOnline && <View style={styles.radioButtonDot} />}
+              </View>
+            </View>
+          </TouchableOpacity>
+        </View>
 
         {/* Lugares */}
-        <View>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Selecione os lugares</Text>
-            <Text style={styles.selectedCount}>
-              {selectedPlaces.length} selecionado{selectedPlaces.length !== 1 ? "s" : ""}
-            </Text>
-          </View>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Locais do Roteiro *</Text>
+          <Text style={styles.sectionSubtitle}>
+            Selecione {selectedPlaces.length > 0 ? `(${selectedPlaces.length}) ` : ""}os locais
+          </Text>
 
           <View style={styles.grid}>
             {allPlaces.map((place) => {
               const selected = selectedPlaces.includes(place.id);
-              return (
-                <Pressable
-                  key={place.id}
-                  onPress={() => togglePlace(place.id)}
-                  style={[styles.card, selected && styles.cardSelected]}
-                  accessible={true}
-                  accessibilityLabel={`${place.title}, ${selected ? "selecionado" : "não selecionado"}`}
-                  accessibilityRole="checkbox"
-                >
-                  <Image
-                    source={place.image}
-                    style={styles.image}
-                    accessibilityIgnoresInvertColors
-                  />
-                  <View style={styles.overlay} />
+              const placeImage = getPlaceImage(place.id);
 
-                  {selected && (
-                    <View style={styles.check}>
-                      <Check size={14} color="#fff" />
+              return (
+                <TouchableOpacity
+                  key={place.id}
+                  style={[
+                    styles.placeCard,
+                    selected && styles.placeCardSelected,
+                  ]}
+                  onPress={() => togglePlace(place.id)}
+                  activeOpacity={0.7}
+                >
+                  {placeImage ? (
+                    <Image
+                      source={placeImage}
+                      style={styles.placeImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={styles.placeImagePlaceholder}>
+                      <MapPin size={24} color={colors.mutedForeground} />
                     </View>
                   )}
 
-                  <Text style={styles.cardTitle} numberOfLines={2}>
-                    {place.title}
-                  </Text>
-                </Pressable>
+                  <View style={styles.placeCardOverlay}>
+                    <Text style={styles.placeCardTitle}>{place.title}</Text>
+                  </View>
+
+                  {selected && (
+                    <View style={styles.selectedBadge}>
+                      <Text style={styles.selectedBadgeText}>✓</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
               );
             })}
           </View>
+        </View>
 
-          {allPlaces.length === 0 && (
-            <Text style={styles.emptyState}>
-              Nenhum local disponível
-            </Text>
-          )}
+        {/* Botão Salvar */}
+        <View style={styles.footer}>
+          <Button
+            title={saving ? "Salvando..." : isEditing ? "Atualizar Roteiro" : "Criar Roteiro"}
+            onPress={handleSave}
+            disabled={saving}
+          />
         </View>
       </ScrollView>
 
-      {/* Botão */}
-      <View style={styles.footer}>
-        <Button
-          title={loading ? "Criando..." : "Criar Roteiro"}
-          onPress={handleSubmit(onSubmit)}
-          disabled={loading}
+      {/* DateTimePicker - Data Início */}
+      {showStartDatePicker && (
+        <DateTimePicker
+          value={startDate}
+          mode="date"
+          display={Platform.OS === "ios" ? "spinner" : "default"}
+          onChange={handleStartDateChange}
+          locale="pt-BR"
         />
-        {loading && (
-          <ActivityIndicator
-            color={colors.primary}
-            style={styles.loader}
-          />
-        )}
-      </View>
-    </View>
+      )}
+
+      {/* DateTimePicker - Data Fim */}
+      {showEndDatePicker && (
+        <DateTimePicker
+          value={endDate}
+          mode="date"
+          display={Platform.OS === "ios" ? "spinner" : "default"}
+          onChange={handleEndDateChange}
+          locale="pt-BR"
+        />
+      )}
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.background },
-
+  screen: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
   header: {
     paddingHorizontal: 24,
-    paddingTop: 56,
-    paddingBottom: 16,
+    paddingVertical: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     borderBottomWidth: 1,
     borderColor: colors.border,
   },
-
-  headerContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-
-  icon: {
-    width: 36,
-    height: 36,
-    backgroundColor: colors.primary,
-    borderRadius: radius.md,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  title: {
-    fontSize: 20,
+  headerTitle: {
+    fontSize: 18,
+    fontFamily: fontFamily.bold,
     color: colors.foreground,
-    fontFamily: fontFamily.semiBold,
   },
-
   container: {
     padding: 24,
-    paddingBottom: 120,
+    paddingBottom: 100,
     gap: 24,
   },
-
-  field: {
-    gap: 6,
+  section: {
+    gap: 12,
   },
-
+  sectionTitle: {
+    fontSize: 16,
+    fontFamily: fontFamily.semiBold,
+    color: colors.foreground,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    fontFamily: fontFamily.regular,
+    color: colors.mutedForeground,
+  },
+  field: {
+    gap: 8,
+  },
   label: {
+    fontSize: 14,
     fontFamily: fontFamily.medium,
     color: colors.foreground,
-    fontSize: 14,
   },
-
   input: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -502,202 +433,147 @@ const styles = StyleSheet.create({
     padding: 12,
     fontFamily: fontFamily.regular,
     color: colors.foreground,
+    backgroundColor: colors.card,
     fontSize: 14,
   },
-
-  inputError: {
-    borderColor: colors.destructive,
-    backgroundColor: `${colors.destructive}10`,
-  },
-
-  errorContainer: {
-    flexDirection: "row",
-    gap: 6,
-    alignItems: "center",
-    marginTop: 4,
-  },
-
-  error: {
-    fontSize: 12,
-    color: colors.destructive,
-    fontFamily: fontFamily.medium,
-  },
-
-  warningContainer: {
-    flexDirection: "row",
-    gap: 10,
-    padding: 12,
-    backgroundColor: `${colors.destructive}10`,
-    borderRadius: radius.md,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.destructive,
-    alignItems: "center",
-  },
-
-  warningText: {
-    flex: 1,
-    color: colors.destructive,
-    fontFamily: fontFamily.medium,
-    fontSize: 13,
-  },
-
   row: {
     flexDirection: "row",
     gap: 12,
   },
-
-  offlineCard: {
+  dateButton: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: colors.card,
-    padding: 16,
-    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    backgroundColor: colors.card,
+    gap: 10,
   },
-
-  offlineInfo: {
-    flexDirection: "row",
-    gap: 12,
-    alignItems: "center",
+  dateButtonText: {
     flex: 1,
-  },
-
-  offlineTitle: {
-    fontFamily: fontFamily.medium,
+    fontFamily: fontFamily.regular,
     color: colors.foreground,
     fontSize: 14,
   },
-
-  offlineSubtitle: {
-    fontSize: 12,
-    color: colors.mutedForeground,
+  syncCard: {
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 12,
   },
-
-  sectionHeader: {
+  syncCardActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.muted,
+  },
+  syncCardContent: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    gap: 12,
   },
-
-  sectionTitle: {
+  syncIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
+    backgroundColor: colors.muted,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  syncIconActive: {
+    backgroundColor: colors.primary,
+  },
+  syncTitle: {
+    fontSize: 14,
     fontFamily: fontFamily.semiBold,
-    fontSize: 16,
     color: colors.foreground,
   },
-
-  selectedCount: {
+  syncSubtitle: {
     fontSize: 12,
+    fontFamily: fontFamily.regular,
     color: colors.mutedForeground,
-    fontFamily: fontFamily.medium,
+    marginTop: 2,
   },
-
+  radioButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  radioButtonSelected: {
+    borderColor: colors.primary,
+  },
+  radioButtonDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.primary,
+  },
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 12,
-    marginTop: 12,
+    marginTop: 8,
   },
-
-  card: {
+  placeCard: {
     width: "48%",
-    height: 120,
+    aspectRatio: 1,
     borderRadius: radius.lg,
     overflow: "hidden",
     borderWidth: 2,
-    borderColor: "transparent",
+    borderColor: colors.border,
   },
-
-  cardSelected: {
+  placeCardSelected: {
     borderColor: colors.primary,
   },
-
-  image: {
-    ...StyleSheet.absoluteFillObject,
-    width: "100%",  
+  placeImage: {
+    width: "100%",
     height: "100%",
-    resizeMode: "cover",
   },
-
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.35)",
+  placeImagePlaceholder: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: colors.muted,
+    alignItems: "center",
+    justifyContent: "center",
   },
-
-  check: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    padding: 4,
-  },
-
-  cardTitle: {
-    position: "absolute",
-    bottom: 8,
-    left: 8,
-    right: 8,
-    color: "#fff",
-    fontFamily: fontFamily.semiBold,
-    fontSize: 12,
-  },
-
-  emptyState: {
-    textAlign: "center",
-    color: colors.mutedForeground,
-    fontFamily: fontFamily.regular,
-    paddingVertical: 20,
-  },
-
-  footer: {
+  placeCardOverlay: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 16,
-    backgroundColor: colors.card,
-    borderTopWidth: 1,
-    borderColor: colors.border,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
   },
-
-  loader: {
-    marginTop: 8,
-  },
-
-  dateInput: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    padding: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-
-  dateText: {
-    fontFamily: fontFamily.regular,
-    color: colors.foreground,
-    fontSize: 14,
-    flex: 1,
-  },
-
-  dateTextPlaceholder: {
-    color: colors.mutedForeground,
-  },
-
-  datePickerDone: {
-    backgroundColor: colors.primary,
-    padding: 12,
-    borderRadius: radius.md,
-    alignItems: "center",
-    marginTop: 8,
-  },
-
-  datePickerDoneText: {
-    color: colors.primaryForeground,
+  placeCardTitle: {
+    fontSize: 12,
     fontFamily: fontFamily.semiBold,
-    fontSize: 14,
+    color: colors.primaryForeground,
+  },
+  selectedBadge: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  selectedBadgeText: {
+    fontSize: 16,
+    fontFamily: fontFamily.bold,
+    color: colors.primaryForeground,
+  },
+  footer: {
+    gap: 12,
+    marginTop: 8,
   },
 });
