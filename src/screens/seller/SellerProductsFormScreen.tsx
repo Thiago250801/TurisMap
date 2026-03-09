@@ -10,7 +10,7 @@ import {
   Image as RNImage,
   ActivityIndicator,
 } from "react-native";
-import { ArrowLeft, ImageIcon, Camera, Trash2 } from "lucide-react-native";
+import { ArrowLeft, ImageIcon, Camera, Trash2, MapPin } from "lucide-react-native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RouteProp } from "@react-navigation/native";
 import { colors, fontFamily, radius } from "../../theme";
@@ -54,7 +54,10 @@ export const SellerProductFormScreen = ({ navigation, route }: Props) => {
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const allPlaces = [...suggestions, ...popularPlaces];
+  // Filtrar lugares únicos para a lista de vinculação
+  const allPlaces = [...suggestions, ...popularPlaces].filter((p, i, self) =>
+    i === self.findIndex((x) => x.id === p.id),
+  );
 
   useEffect(() => {
     if (isEditing && productId) {
@@ -64,7 +67,7 @@ export const SellerProductFormScreen = ({ navigation, route }: Props) => {
         setPrice(product.price.toString());
         setDescription(product.description);
         setImageUri(product.image || null);
-        // Prefill linked place if exists (take first linked place)
+        // Preenche o lugar vinculado se existir
         setPlaceId(
           (product as any).placeIds && (product as any).placeIds.length > 0
             ? (product as any).placeIds[0]
@@ -77,7 +80,6 @@ export const SellerProductFormScreen = ({ navigation, route }: Props) => {
   const handlePickImage = async () => {
     try {
       const result = await imageService.pickImage();
-
       if (result) {
         if (!imageService.validateImageSize(result.fileSize, 5)) {
           Alert.alert("Erro", "A imagem deve ter no máximo 5MB");
@@ -93,7 +95,6 @@ export const SellerProductFormScreen = ({ navigation, route }: Props) => {
   const handleTakePhoto = async () => {
     try {
       const result = await imageService.takePhoto();
-
       if (result) {
         if (!imageService.validateImageSize(result.fileSize, 5)) {
           Alert.alert("Erro", "A imagem deve ter no máximo 5MB");
@@ -116,6 +117,7 @@ export const SellerProductFormScreen = ({ navigation, route }: Props) => {
       return;
     }
 
+    // Validações Obrigatórias
     if (!title.trim()) {
       Alert.alert("Validação", "Preencha o nome do produto");
       return;
@@ -128,17 +130,20 @@ export const SellerProductFormScreen = ({ navigation, route }: Props) => {
 
     const priceNum = parseFloat(price.replace(",", "."));
     if (isNaN(priceNum) || priceNum <= 0) {
-      Alert.alert(
-        "Validação",
-        "Preço deve ser um número válido maior que zero",
-      );
+      Alert.alert("Validação", "Preço deve ser um número válido maior que zero");
+      return;
+    }
+
+    // NOVA VALIDAÇÃO OBRIGATÓRIA: Lugar
+    if (!placeId) {
+      Alert.alert("Validação", "Você deve vincular este produto a um lugar/ponto turístico.");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      const linkedPlaceIds = placeId ? [placeId] : [];
+      const linkedPlaceIds = [placeId]; // Agora sempre terá um ID
 
       if (isEditing && productId) {
         await updateProduct(productId, {
@@ -173,7 +178,6 @@ export const SellerProductFormScreen = ({ navigation, route }: Props) => {
 
   const handleDelete = () => {
     if (!productId) return;
-
     Alert.alert(
       "Excluir produto",
       "Tem certeza que deseja excluir este produto?",
@@ -200,75 +204,52 @@ export const SellerProductFormScreen = ({ navigation, route }: Props) => {
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7}>
           <ArrowLeft size={24} color={colors.foreground} />
         </TouchableOpacity>
-
         <Text style={styles.headerTitle}>
           {isEditing ? "Editar Produto" : "Novo Produto"}
         </Text>
-
-        {isEditing && (
+        {isEditing ? (
           <TouchableOpacity onPress={handleDelete} activeOpacity={0.7}>
             <Trash2 size={22} color={colors.destructive} />
           </TouchableOpacity>
+        ) : (
+          <View style={{ width: 24 }} />
         )}
-
-        {!isEditing && <View style={{ width: 24 }} />}
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
-      >
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        {/* Imagem */}
         <View style={styles.imageSection}>
           {imageUri ? (
             <View style={styles.imagePreviewContainer}>
               <RNImage source={{ uri: imageUri }} style={styles.imagePreview} />
-              <TouchableOpacity
-                style={styles.removeImageButton}
-                onPress={handleRemoveImage}
-              >
+              <TouchableOpacity style={styles.removeImageButton} onPress={handleRemoveImage}>
                 <Trash2 size={18} color={colors.primaryForeground} />
               </TouchableOpacity>
             </View>
           ) : (
             <View style={styles.imagePlaceholder}>
               <ImageIcon size={48} color={colors.mutedForeground} />
-              <Text style={styles.imagePlaceholderText}>
-                Adicione uma imagem
-              </Text>
+              <Text style={styles.imagePlaceholderText}>Adicione uma imagem</Text>
             </View>
           )}
 
           <View style={styles.imageButtons}>
-            <TouchableOpacity
-              style={styles.imageButton}
-              onPress={handlePickImage}
-              activeOpacity={0.8}
-            >
+            <TouchableOpacity style={styles.imageButton} onPress={handlePickImage} activeOpacity={0.8}>
               <ImageIcon size={18} color={colors.primaryForeground} />
               <Text style={styles.imageButtonText}>Galeria</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.imageButton, styles.imageButtonOutline]}
-              onPress={handleTakePhoto}
-              activeOpacity={0.8}
-            >
+            <TouchableOpacity style={[styles.imageButton, styles.imageButtonOutline]} onPress={handleTakePhoto} activeOpacity={0.8}>
               <Camera size={18} color={colors.primary} />
-              <Text
-                style={[styles.imageButtonText, styles.imageButtonTextOutline]}
-              >
-                Câmera
-              </Text>
+              <Text style={[styles.imageButtonText, styles.imageButtonTextOutline]}>Câmera</Text>
             </TouchableOpacity>
           </View>
         </View>
 
+        {/* Nome do Produto */}
         <View style={styles.formGroup}>
           <Text style={styles.label}>Nome do produto *</Text>
           <TextInput
@@ -281,6 +262,7 @@ export const SellerProductFormScreen = ({ navigation, route }: Props) => {
           />
         </View>
 
+        {/* Preço */}
         <View style={styles.formGroup}>
           <Text style={styles.label}>Preço (R$) *</Text>
           <TextInput
@@ -293,6 +275,7 @@ export const SellerProductFormScreen = ({ navigation, route }: Props) => {
           />
         </View>
 
+        {/* Descrição */}
         <View style={styles.formGroup}>
           <Text style={styles.label}>Descrição</Text>
           <TextInput
@@ -309,8 +292,12 @@ export const SellerProductFormScreen = ({ navigation, route }: Props) => {
           <Text style={styles.charCount}>{description.length}/500</Text>
         </View>
 
+        {/* Vincular ao Lugar - OBRIGATÓRIO */}
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Vincular ao lugar (opcional)</Text>
+          <View style={styles.labelRow}>
+             <Text style={styles.label}>Vincular ao lugar *</Text>
+             {placeId && <Text style={styles.selectedBadge}>Selecionado</Text>}
+          </View>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -320,12 +307,13 @@ export const SellerProductFormScreen = ({ navigation, route }: Props) => {
               <TouchableOpacity
                 key={p.id}
                 activeOpacity={0.8}
-                onPress={() => setPlaceId(p.id === placeId ? null : p.id)}
+                onPress={() => setPlaceId(p.id)} // Removido toggle (clicar de novo não desmarca, apenas muda)
                 style={[
                   styles.placeItem,
                   placeId === p.id ? styles.placeItemSelected : null,
                 ]}
               >
+                <MapPin size={14} color={placeId === p.id ? colors.primaryForeground : colors.mutedForeground} style={{marginRight: 4}} />
                 <Text
                   style={[
                     styles.placeItemText,
@@ -358,11 +346,7 @@ export const SellerProductFormScreen = ({ navigation, route }: Props) => {
 };
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-
+  screen: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -372,35 +356,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderColor: colors.border,
   },
-
-  headerTitle: {
-    fontSize: 18,
-    fontFamily: fontFamily.semiBold,
-    color: colors.foreground,
-  },
-
-  content: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    gap: 20,
-    paddingBottom: 120,
-  },
-
-  imageSection: {
-    gap: 12,
-  },
-
-  imagePreviewContainer: {
-    position: "relative",
-  },
-
-  imagePreview: {
-    width: "100%",
-    height: 200,
-    borderRadius: radius.xl,
-    backgroundColor: colors.muted,
-  },
-
+  headerTitle: { fontSize: 18, fontFamily: fontFamily.semiBold, color: colors.foreground },
+  content: { paddingHorizontal: 16, paddingVertical: 16, gap: 20, paddingBottom: 120 },
+  imageSection: { gap: 12 },
+  imagePreviewContainer: { position: "relative" },
+  imagePreview: { width: "100%", height: 200, borderRadius: radius.xl, backgroundColor: colors.muted },
   removeImageButton: {
     position: "absolute",
     top: 12,
@@ -412,7 +372,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
   imagePlaceholder: {
     width: "100%",
     height: 200,
@@ -425,18 +384,8 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
     borderColor: colors.border,
   },
-
-  imagePlaceholderText: {
-    fontSize: 14,
-    color: colors.mutedForeground,
-    fontFamily: fontFamily.medium,
-  },
-
-  imageButtons: {
-    flexDirection: "row",
-    gap: 12,
-  },
-
+  imagePlaceholderText: { fontSize: 14, color: colors.mutedForeground, fontFamily: fontFamily.medium },
+  imageButtons: { flexDirection: "row", gap: 12 },
   imageButton: {
     flex: 1,
     flexDirection: "row",
@@ -447,33 +396,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: radius.lg,
   },
-
-  imageButtonOutline: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-
-  imageButtonText: {
-    color: colors.primaryForeground,
-    fontFamily: fontFamily.semiBold,
-    fontSize: 14,
-  },
-
-  imageButtonTextOutline: {
-    color: colors.primary,
-  },
-
-  formGroup: {
-    gap: 6,
-  },
-
-  label: {
-    fontSize: 14,
-    fontFamily: fontFamily.medium,
-    color: colors.foreground,
-  },
-
+  imageButtonOutline: { backgroundColor: "transparent", borderWidth: 1, borderColor: colors.primary },
+  imageButtonText: { color: colors.primaryForeground, fontFamily: fontFamily.semiBold, fontSize: 14 },
+  imageButtonTextOutline: { color: colors.primary },
+  formGroup: { gap: 6 },
+  labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  label: { fontSize: 14, fontFamily: fontFamily.medium, color: colors.foreground },
+  selectedBadge: { fontSize: 11, color: colors.primary, fontFamily: fontFamily.bold },
   input: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -485,20 +414,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     backgroundColor: colors.card,
   },
-
-  textarea: {
-    height: 120,
-    textAlignVertical: "top",
-  },
-
-  charCount: {
-    fontSize: 12,
-    color: colors.mutedForeground,
-    fontFamily: fontFamily.regular,
-    textAlign: "right",
-    marginTop: 4,
-  },
-
+  textarea: { height: 120, textAlignVertical: "top" },
+  charCount: { fontSize: 12, color: colors.mutedForeground, fontFamily: fontFamily.regular, textAlign: "right", marginTop: 4 },
   footer: {
     position: "absolute",
     bottom: 0,
@@ -509,13 +426,10 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: colors.border,
   },
-
-  placesList: {
-    paddingVertical: 8,
-    gap: 8,
-  },
-
+  placesList: { paddingVertical: 8, gap: 8 },
   placeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: radius.md,
@@ -524,20 +438,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     marginRight: 8,
   },
-
-  placeItemSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-
-  placeItemText: {
-    fontSize: 14,
-    color: colors.foreground,
-    fontFamily: fontFamily.regular,
-  },
-
-  placeItemTextSelected: {
-    color: colors.primaryForeground,
-    fontFamily: fontFamily.semiBold,
-  },
+  placeItemSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
+  placeItemText: { fontSize: 14, color: colors.foreground, fontFamily: fontFamily.regular },
+  placeItemTextSelected: { color: colors.primaryForeground, fontFamily: fontFamily.semiBold },
 });

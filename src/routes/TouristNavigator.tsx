@@ -13,6 +13,8 @@ import { ProductDetailsScreen } from "../screens/tourist/ProductDetailsScreen";
 import { TouristHomeScreen } from "../screens/tourist/TouristHomeScreen";
 import { CreatePlanScreen } from "../screens/tourist/CreatePlanScreen";
 import { PlansScreen } from "../screens/tourist/PlansScreen";
+import { ViewPlanScreen } from "../screens/tourist/ViewPlanScreen";
+import { CheckoutScreen } from "../screens/tourist/CheckoutScreen";
 
 type TouristTabsParamList = {
   HomeTab: undefined;
@@ -27,6 +29,8 @@ type TouristStackParamList = {
   Place: { id: string };
   Product: { id: string };
   CreatePlan: { id?: string } | undefined;
+  ViewPlan: { id: string } | undefined;
+  Checkout: { product: any; seller: any; quantity: number };
 };
 
 const Tab = createBottomTabNavigator<TouristTabsParamList>();
@@ -105,8 +109,10 @@ export const TouristNavigator = () => {
       <Stack.Screen name="Place" component={PlaceDetailsScreen} />
       <Stack.Screen name="Product" component={ProductDetailsScreen} />
       
-      {/* Create/Edit Plan */}
+      {/* Create/Edit Plan/View */}
       <Stack.Screen name="CreatePlan" component={CreatePlanScreen} />
+      <Stack.Screen name="ViewPlan" component={ViewPlanScreen} />
+      <Stack.Screen name="Checkout" component={CheckoutScreen} />
     </Stack.Navigator>
   );
 };

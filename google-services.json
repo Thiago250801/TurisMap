@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "637224589121",
+    "firebase_url": "https://turismap-dd246-default-rtdb.firebaseio.com",
+    "project_id": "turismap-dd246",
+    "storage_bucket": "turismap-dd246.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:637224589121:android:5bb0762575956d6de3b3c0",
+        "android_client_info": {
+          "package_name": "com.app.turismap"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAEqDJptCWNrmoQoQhRyI8HOiX2m3cYR8o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:637224589121:android:68cb0c8fa4cca8f5e3b3c0",
+        "android_client_info": {
+          "package_name": "com.thiago250801.TurisMap"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAEqDJptCWNrmoQoQhRyI8HOiX2m3cYR8o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

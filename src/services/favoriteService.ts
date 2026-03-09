@@ -28,10 +28,11 @@ export const favoriteService = {
     rating: number,
     image: string,
   ): Promise<Favorite> {
+    const favoriteId = `${placeId}`;
     const favoriteRef = doc(collection(db, "favorites"));
 
     const favorite: Favorite = {
-      id: favoriteRef.id,
+      id: favoriteId,
       userId,
       placeId,
       title,

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ImageBackground,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import {
   ArrowLeft,
@@ -222,7 +223,7 @@ export const PlaceDetailsScreen = ({ navigation, route }: Props) => {
       </ScrollView>
 
       <View style={styles.bottomButton}>
-        <Button title="Adicionar ao Plano" onPress={handleAddToPlan} />
+        <Button title="Adicionar ao Plano" onPress={() => Alert.alert("Em desenvolvimento", "Esta funcionalidade será implementada em breve")} />
       </View>
     </SafeAreaView>
   );
@@ -414,7 +415,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderTopWidth: 1,
     borderColor: colors.border,
-    padding: 16,
+    paddingBottom: 40,
+    paddingTop: 16,
+    paddingHorizontal: 16,
   },
 
   notFoundContainer: {

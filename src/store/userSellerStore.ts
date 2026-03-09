@@ -27,10 +27,18 @@ export type SellerStore = {
   deleteProduct: (id: string) => Promise<void>;
   getProduct: (id: string) => SellerProduct | undefined;
 
+  // Store Info
   storeName: string;
   storeOwner: string;
   storeDescription: string;
+  storeLogo: string | null;
+  pixKey: string;
+  pixKeyType: "cpf" | "cnpj" | "email" | "phone" | "random";
+
+  // Store Info Methods
   setStoreInfo: (name: string, owner: string, description: string) => void;
+  setStoreLogo: (logo: string | null) => void;
+  setPixInfo: (key: string, type: "cpf" | "cnpj" | "email" | "phone" | "random") => void;
 };
 
 export const useSellerStore = create<SellerStore>()(
@@ -39,9 +47,13 @@ export const useSellerStore = create<SellerStore>()(
       products: [],
       isLoading: false,
 
-      storeName: "Bijuteria Indígena",
-      storeOwner: "Luiza Lima",
-      storeDescription: "Artesanato tradicional da comunidade Dessana",
+      // Store Info
+      storeName: "",
+      storeOwner: "",
+      storeDescription: "",
+      storeLogo: null,
+      pixKey: "",
+      pixKeyType: "cpf",
 
       loadProducts: async (sellerId: string) => {
         set({ isLoading: true });
@@ -147,6 +159,17 @@ export const useSellerStore = create<SellerStore>()(
           storeOwner: owner,
           storeDescription: description,
         }),
+
+      setStoreLogo: (logo) =>
+        set({
+          storeLogo: logo,
+        }),
+
+      setPixInfo: (key, type) =>
+        set({
+          pixKey: key,
+          pixKeyType: type,
+        }),
     }),
     {
       name: "turismap-seller",
@@ -156,6 +179,9 @@ export const useSellerStore = create<SellerStore>()(
         storeName: state.storeName,
         storeOwner: state.storeOwner,
         storeDescription: state.storeDescription,
+        storeLogo: state.storeLogo,
+        pixKey: state.pixKey,
+        pixKeyType: state.pixKeyType,
       }),
     },
   ),

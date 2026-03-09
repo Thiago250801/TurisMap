@@ -4,6 +4,7 @@ import pontaNegra from "../assets/Ponta_Negra.jpg";
 import encontroAguas from "../assets/Encontro_Aguas.jpg";
 import passeioBarco from "../assets/Passeio_Barco.jpg";
 import mercadoMunicipal from "../assets/Mercado_Municipal.jpg";
+import triboDessana from "../assets/Tribo_Dessana2.jpg";
 import {
   Globe,
   Landmark,
@@ -71,6 +72,16 @@ export const suggestions: Place[] = [
 ];
 
 export const popularPlaces: Place[] = [
+    {
+    id: "1",
+    title: "Teatro Amazonas",
+    location: "Manaus, AM",
+    rating: 4.8,
+    image: teatroAmazonas,
+    description:
+      "O Teatro Amazonas é um teatro brasileiro localizado no centro de Manaus, capital do estado do Amazonas. É a mais importante casa de espetáculos da região Norte do Brasil.",
+    category: "cultural",
+  },
   {
     id: "4",
     title: "Mercado Municipal Adolpho Lisboa",
@@ -81,6 +92,17 @@ export const popularPlaces: Place[] = [
       "Mercado histórico com arquitetura art nouveau, oferecendo produtos típicos da região amazônica.",
     category: "cultural",
   },
+  {
+    id: "5",
+    title: "Tribo Dessana",
+    location: "Manaus, AM",
+    rating: 4.7,
+    image: triboDessana,
+    description:
+      "Tribo indígena que vive no entorno da cidade de Manaus, conhecida por sua cultura rica e tradições milenares.",
+    category: "cultural",
+  }
+
 ];
 
 export const categories = [

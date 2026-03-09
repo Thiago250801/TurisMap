@@ -15,11 +15,12 @@ import { Button } from "../../components/Button";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { usePlansStore } from "../../store/usePlanStore";
 import { useAuthStore } from "../../store/useAuthStore";
-import { Map, Edit2, Trash2 } from "lucide-react-native";
+import { Map, Edit2, Trash2, Eye } from "lucide-react-native";
 
 type PlansStackParamList = {
   Plans: undefined;
   CreatePlan: { id?: string } | undefined;
+  ViewPlan: { id: string } | undefined;
 };
 
 type PlansNavigationProp = NativeStackNavigationProp<
@@ -72,6 +73,10 @@ export const PlansScreen = ({
     navigation.navigate("CreatePlan", { id: planId });
   };
 
+  const handleViewPlan = (planId: string) => {
+    navigation.navigate("ViewPlan", { id: planId });
+  }
+
   const confirmDelete = (id: string, name: string) => {
     Alert.alert("Remover roteiro", `Deseja remover "${name}"?`, [
       { text: "Cancelar", style: "cancel" },
@@ -117,6 +122,13 @@ export const PlansScreen = ({
           </View>
 
           <View style={styles.cardActions}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => handleViewPlan(item.id)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Eye size={18} color={colors.primary} />
+            </TouchableOpacity>
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => handleEditPlan(item.id)}

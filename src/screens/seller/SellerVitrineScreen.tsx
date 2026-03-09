@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -26,7 +26,8 @@ import {
   SellerProductsStackParamList,
   SellerTabsParamList,
 } from "../../routes/types";
-import { int } from "zod";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "../../services/firebase";
 
 type SellerVirineNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<SellerTabsParamList, "VitrineTab">,
@@ -40,13 +41,85 @@ interface Props {
 export const SellerVitrineScreen = ({ navigation }: Props) => {
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
-  const { products, updateProduct, loadProducts, isLoading } = useSellerStore();
+  const { products, updateProduct, loadProducts, isLoading, setStoreInfo, setStoreLogo } = useSellerStore();
+
+  // Estados para dados da loja do Firebase
+  const [storeName, setStoreName] = useState("Sua Loja");
+  const [storeDescription, setStoreDescription] = useState("Clique em ⚙️ para adicionar descrição");
+  const [storeLogo, setStoreLogoState] = useState<string | null>(null);
+  const [loadingStore, setLoadingStore] = useState(false);
+  
+  // Usar ref para armazenar função de unsubscribe
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    if (user?.id) {
-      loadProducts(user.id);
+    // Se não tem usuário, para o listener e retorna
+    if (!user?.id) {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
+      return;
     }
+
+    // Se tem usuário, carrega produtos e setup listener
+    loadProducts(user.id);
+    setupRealtimeListener();
+
+    // Cleanup ao desmontar
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
+    };
   }, [user?.id]);
+
+  // Listener em tempo real do Firebase
+  const setupRealtimeListener = () => {
+    // Verificação adicional
+    if (!user?.id) return;
+
+    setLoadingStore(true);
+
+    try {
+      // Subscribe para atualizações em tempo real
+      const unsubFunc = onSnapshot(
+        doc(db, "sellers", user.id),
+        (docSnapshot) => {
+          if (docSnapshot.exists()) {
+            const seller = docSnapshot.data();
+
+            setStoreName(seller.storeName || "Sua Loja");
+            setStoreDescription(seller.storeDescription || "Clique em ⚙️ para adicionar descrição");
+            setStoreLogoState(seller.storeLogo || null);
+
+            // Sincronizar com Zustand
+            setStoreInfo(seller.storeName, seller.storeOwner, seller.storeDescription);
+            if (seller.storeLogo) {
+              setStoreLogo(seller.storeLogo);
+            }
+          }
+          setLoadingStore(false);
+        },
+        (error) => {
+          // Ignorar erro de permissão se usuário fez logout
+          if (error.code === "permission-denied") {
+            console.log("Usuário desautenticado - listener parado");
+            return;
+          }
+          console.error("Erro ao escutar mudanças:", error);
+          setLoadingStore(false);
+        }
+      );
+
+      // Salvar função de unsubscribe
+      unsubscribeRef.current = unsubFunc;
+    } catch (error) {
+      console.error("Erro ao setup listener:", error);
+      setLoadingStore(false);
+    }
+  };
 
   const toggleAvailability = async (id: string, available: boolean) => {
     try {
@@ -65,7 +138,9 @@ export const SellerVitrineScreen = ({ navigation }: Props) => {
     });
   };
 
-  if (isLoading && products.length === 0) {
+  const isLoadingProducts = isLoading && products.length === 0;
+
+  if (isLoadingProducts || loadingStore) {
     return (
       <View style={[styles.screen, { paddingTop: insets.top }]}>
         <View style={styles.loadingContainer}>
@@ -106,8 +181,18 @@ export const SellerVitrineScreen = ({ navigation }: Props) => {
       >
         {/* Store Header Card */}
         <View style={styles.storeCard}>
-          <View style={styles.storeAvatar}>
-            <Store size={32} color={colors.primaryForeground} />
+          <View style={styles.storeAvatarContainer}>
+            {storeLogo ? (
+              <Image
+                source={{ uri: storeLogo }}
+                style={styles.storeAvatarImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={styles.storeAvatar}>
+                <Store size={32} color={colors.primaryForeground} />
+              </View>
+            )}
 
             <TouchableOpacity
               style={styles.settingsButton}
@@ -118,10 +203,14 @@ export const SellerVitrineScreen = ({ navigation }: Props) => {
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.storeName}>Loja do Vendedor</Text>
-          <Text style={styles.storeOwner}>Descrição da loja</Text>
-          <Text style={styles.storeDescription}>
-            Sua loja de produtos e experiências
+          <Text style={styles.storeName} numberOfLines={1}>
+            {storeName}
+          </Text>
+          <Text style={styles.storeOwner}>
+            {user?.name || "Vendedor"}
+          </Text>
+          <Text style={styles.storeDescription} numberOfLines={2}>
+            {storeDescription}
           </Text>
         </View>
 
@@ -142,7 +231,7 @@ export const SellerVitrineScreen = ({ navigation }: Props) => {
               <TouchableOpacity
                 style={styles.emptyButton}
                 onPress={() =>
-                  navigation.navigate("SellerProductForm" as any, {
+                  navigation.navigate("ProductsTab" as any, {
                     screen: "SellerProductForm",
                   })
                 }
@@ -292,19 +381,12 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
 
-  settingsButton: {
-  position: "absolute",
-  top: 2,
-  right: -2,
-  backgroundColor: `${colors.card}cc`,
-  borderColor: colors.foreground,
-  borderWidth: 1,
-  borderRadius: 12,
-  width: 24,
-  height: 24,
-  alignItems: "center",
-  justifyContent: "center",
-},
+  storeAvatarContainer: {
+    position: "relative",
+    width: 80,
+    height: 80,
+    marginBottom: 16,
+  },
 
   storeAvatar: {
     width: 80,
@@ -313,7 +395,30 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
+    borderWidth: 3,
+    borderColor: colors.primary,
+  },
+
+  storeAvatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: colors.primary,
+  },
+
+  settingsButton: {
+    position: "absolute",
+    top: 2,
+    right: -2,
+    backgroundColor: `${colors.card}cc`,
+    borderColor: colors.foreground,
+    borderWidth: 1,
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   storeName: {

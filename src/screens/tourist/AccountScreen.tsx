@@ -58,7 +58,6 @@ export const AccountScreen = ({ navigation }: Props) => {
 
   const stats = [
     { label: "Lugares", value: all.length.toString() },
-    { label: "Roteiros", value: "3" },
     { label: "Favoritos", value: favorites.length.toString() },
   ];
 
@@ -77,7 +76,7 @@ export const AccountScreen = ({ navigation }: Props) => {
         icon: <History size={20} color={colors.primary} />,
         label: "Histórico",
         description: "Lugares visitados",
-        onPress: () => navigation.navigate("History" as never),
+        onPress: () => { Alert.alert("Em desenvolvimento", "Esta funcionalidade será implementada em breve");},
         color: colors.primary,
       },
       {
@@ -86,7 +85,7 @@ export const AccountScreen = ({ navigation }: Props) => {
         label: "Configurações",
         description: "Preferências do app",
         onPress: () => {
-          // TODO: Implementar
+          Alert.alert("Em desenvolvimento", "Esta funcionalidade será implementada em breve");
         },
         color: colors.mutedForeground,
       },
@@ -96,7 +95,7 @@ export const AccountScreen = ({ navigation }: Props) => {
         label: "Ajuda",
         description: "Suporte e FAQ",
         onPress: () => {
-          // TODO: Implementar
+          Alert.alert("Em desenvolvimento", "Esta funcionalidade será implementada em breve");
         },
         color: colors.mutedForeground,
       },
